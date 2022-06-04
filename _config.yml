@@ -25,13 +25,43 @@ description: >- # this means to ignore newlines until "baseurl:"
 baseurl: "" # the subpath of your site, e.g. /blog
 domain: mikehentges.github.io
 url: "https://mikehentges.gihub.io" # the base hostname & protocol for your site, e.g. http://example.com
+timezone: America/Chicago
+
+social:
+  name: Michael Hentges
+  links:
+    - https://github.com/mikehentges
+    - https://twitter.com/HentgesMike
+
+collections:
+  pages:
+    output: true
+    permalink: /:title
+
+permalink: /:slug
+
+paginate: 5
+pagination_path: "blog/page:num/"
+
 twitter_username: HentgesMike
 github_username: mikehentges
 
+highlighter: rogue
+syntax_highligher: rogue
+
+sass:
+  sass_dir: _sass
+  style: compressed
+
 # Build settings
-theme: minima
+# theme: minima
 plugins:
   - jekyll-feed
+  - jekyll-sass-converter
+  - jekyll-paginate
+  - rogue
+  - jekyll-sitemap
+  - jekyll-seo-tag
 # Exclude from processing.
 # The following items will not be processed, by default.
 # Any item listed under the `exclude:` key here will be automatically added to
@@ -40,7 +70,8 @@ plugins:
 # Excluded items can be processed by explicitly listing the directories or
 # their entries' file path in the `include:` list.
 #
-# exclude:
+exclude:
+  - Makefile
 #   - .sass-cache/
 #   - .jekyll-cache/
 #   - gemfiles/
