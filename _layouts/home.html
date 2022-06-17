@@ -2,9 +2,15 @@
 layout: default
 ---
 
-<ul>
-    {% for post in site.posts %}
-    <li><a href="{{ post.url | relative_url }}">{{post.title}}</a></li>
+<h1>In home.html</h1>
+<h1>{{site.title}}</h1>
+<h2>Technology, Programming, Chess, and Woodworking!</h2>
+
+    {% for post in site.posts limit:3 %}
+        <div class="home_card">{{post.categories.first}} - {{post.title}}</div>
+        <li><a href="{{ post.url | relative_url }}">{{post.title}}</a></li>
+        {{post.excerpt}}
+       
     {% endfor %}
-</ul>
+
 <h3><a href="/about">About</a></h3>

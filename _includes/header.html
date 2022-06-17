@@ -15,6 +15,10 @@
     
     <ul>
         <li><a href="/">Home</a></li>
+        
+        {% for category in site.data.categories %}
+            <li><a href="/{{category.category | slugify}}">{{category.category}}</a></li>
+        {% endfor %}
         <li><a href="/about">About</a></li>
     </ul>
 </header>

@@ -40,8 +40,9 @@ collections:
 
 permalink: /:slug
 
-paginate: 5
-pagination_path: "blog/page:num/"
+# - this works, now in index2.html in the /blog directory
+#paginate: 5
+#pagination_path: "blog/page:num/"
 
 twitter_username: HentgesMike
 github_username: mikehentges
@@ -62,6 +63,7 @@ plugins:
   - rogue
   - jekyll-sitemap
   - jekyll-seo-tag
+  - jekyll-datapage-generator
 # Exclude from processing.
 # The following items will not be processed, by default.
 # Any item listed under the `exclude:` key here will be automatically added to
@@ -82,3 +84,11 @@ exclude:
 #   - vendor/cache/
 #   - vendor/gems/
 #   - vendor/ruby/
+
+page_gen:
+  - data: categories
+    template: category_page
+    dir: /
+    index_files: false
+    name: category
+    debug: true

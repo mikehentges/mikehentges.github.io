@@ -1,0 +1,14 @@
+---
+layout: default
+---
+
+<!-- Use any HTML here -->
+
+<h1>Template for category pages</h1>
+<h1>{{page.category}} Page</h1>
+{% for post in site.posts %}
+    {% assign post_match = page.category | downcase %}
+    {% if post.categories contains post_match %}
+        <p>{{post.title}}</p>
+    {% endif %}
+{% endfor %}
