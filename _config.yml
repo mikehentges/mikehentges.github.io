@@ -74,6 +74,7 @@ plugins:
 #
 exclude:
   - Makefile
+  - [vendor]
 #   - .sass-cache/
 #   - .jekyll-cache/
 #   - gemfiles/
