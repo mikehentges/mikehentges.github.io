@@ -1,24 +1,15 @@
 <!-- This is our header. -->
 
 <header>
-    Header
-    <style>
-        ul {
-            list-style-type: none;
-            display: flex;
-        }
-    
-        li {
-            margin: 5px;
-        }
-    </style>
-    
-    <ul>
-        <li><a href="/">Home</a></li>
-        
-        {% for category in site.data.categories %}
-            <li><a href="/{{category.category | slugify}}">{{category.category}}</a></li>
-        {% endfor %}
-        <li><a href="/about">About</a></li>
-    </ul>
+    <div class="header_title">{{ site.title }}</div>
+    <div class="header_menu">
+        <ul>
+            <li><a href="/">Home</a></li>
+            
+            {% for category in site.data.categories %}
+                <li><a href="/{{category.category | slugify}}">{{category.category}}</a></li>
+            {% endfor %}
+            <li><a href="/about">About</a></li>
+        </ul>
+    </div>
 </header>

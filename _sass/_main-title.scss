@@ -1,0 +1,40 @@
+.main-title {
+    padding: 0;
+    text-align: center;
+    position: sticky;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 250px;
+    max-height: 340px;
+    width: 100%;
+    top: 50px;
+    left: 0px;
+    background-image: url("/assets/images/chess_background.jpg");
+    background-size: cover;
+    color: $title-color;
+    z-index: 1;
+
+    .title-img {
+        display: block;
+        max-width: 100%;
+    }
+
+    h1 {
+        font-size: 3.5rem;
+        font-weight: 700;
+        letter-spacing: -.015em;
+        line-height: 1.15;
+        text-rendering: optimizeLegibility;
+        margin: 0;
+        z-index: 10;
+    }
+
+    p {
+        margin: 0;
+        z-index: 10;
+        opacity: .8;
+        font-weight: 600;
+    }
+}

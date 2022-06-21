@@ -1,11 +1,42 @@
-body {
-    background-color: rgb(20, 20, 20);
-    color: #fff;
-    font-size: 18px;
-    font-family:Arial, Helvetica, sans-serif;
+@import 'variables';
+@import 'mixins';
+@import 'card';
+@import 'header';
+@import 'main-title';
+
+#content {
+    margin-top: 100px;
+}
+html {
+    box-sizing: border-box;
 }
 
-a {
-    color: rgb(2, 170, 38);
-    text-decoration: none;
+body {
+    font-family: $fonts;
+    background-color: white;
+    //padding: $spacing;
+    min-height: 100vh;
+    //@include flex-center();
+    margin: 0;
+    //margin-top: 50px;
+
+    
+}
+/*     @include flex-center(); */
+
+bottom {
+    display: block;
+}
+
+h1 {
+    font-size: 4rem;
+    font-weight: 700;
+    letter-spacing: -.015em;
+    line-height: 1.15;
+    text-rendering: optimizeLegibility;
+}
+
+p {
+    font-size: 2rem;
+    font-weight: 400;
 }
