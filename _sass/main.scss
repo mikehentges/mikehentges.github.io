@@ -28,6 +28,7 @@ body {
 bottom {
     position: relative;
     display: block;
+    
 }
 
 h1 {
@@ -41,4 +42,8 @@ h1 {
 p {
     font-size: 2rem;
     font-weight: 400;
+}
+.bottom-title {
+    padding: 20px 40px 0px 40px;
+    font-size: 2rem;
 }

@@ -9,22 +9,23 @@ layout: default
         <p>Technology, Programming, Chess, and Woodworking!</p>
     </div>
 <div class="bottom">
-<div class="home-card-collection">
-    {% for post in site.posts limit:3 %}
-        <div class="home_card">
-            <a class="category_link" 
-                href="/{{post.categories.first | slugify}}">
-            {{post.categories.first | capitalize}}
-            </a>
-            <a class="heading_link"
-                href="{{ post.url | relative_url }}">
-                {{post.title}}
-            </a>
-            {% if post.hero %}
-                <img src="{{post.hero}}">
-            {% endif %}
-            <div class="card_content">{{post.excerpt}}</div>
-        </div>
-    {% endfor %}
-</div>
+    <div class="bottom-title">Recent Posts:</div>
+    <div class="home-card-collection">
+        {% for post in site.posts limit:3 %}
+            <div class="home_card">
+                <a class="category_link" 
+                    href="/{{post.categories.first | slugify}}">
+                {{post.categories.first | capitalize}}
+                </a>
+                <a class="heading_link"
+                    href="{{ post.url | relative_url }}">
+                    {{post.title}}
+                </a>
+                {% if post.hero %}
+                    <img src="{{post.hero}}">
+                {% endif %}
+                <div class="card_content">{{post.excerpt}}</div>
+            </div>
+        {% endfor %}
+    </div>
 </div>
