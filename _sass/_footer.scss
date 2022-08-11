@@ -1,0 +1,47 @@
+footer {
+   
+    position: relative;
+    padding-top: 2rem;
+    min-height: 100px;
+    background-color: $footer-color;
+    color: white;
+    padding: 4vmin 4vmin;
+    margin: 0;
+    
+    .footer-bottom {
+
+        display: grid;
+        grid-gap: 40px;
+        grid-template-columns: auto 1fr auto;
+        font-size: 1rem;
+    }
+    .author {
+            margin: 0;
+            padding: 1rem;
+     
+            max-width: 20rem;
+        }
+    
+    .tool {
+        margin: 0;
+        padding: 1rem;
+        align-self: stretch;
+        max-width: 20rem;
+    }
+
+
+    a {
+        color: #e5eff5;
+        
+    }
+
+    a:-webkit-any-link {
+        cursor: pointer;
+    }
+
+    a:hover {
+        color: white;
+    }
+}
+
+   

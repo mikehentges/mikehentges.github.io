@@ -2,6 +2,7 @@
     padding: 0;
     text-align: center;
     position: sticky;
+    align-self: flex-start;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -9,12 +10,13 @@
     min-height: 250px;
     max-height: 340px;
     width: 100%;
-    top: 50px;
+    
     left: 0px;
     background-image: url("/assets/images/chess_background.jpg");
     background-size: cover;
     color: $title-color;
-    z-index: 1;
+    z-index: 0;
+    margin-top: auto;
 
     .title-img {
         display: block;
@@ -37,4 +39,13 @@
         opacity: .8;
         font-weight: 600;
     }
+}
+
+.title-holder {
+    position: flex;
+    top: 50px;
+    display:block;
+    z-index: 1;
+    width: 100%;
+    
 }
