@@ -1,0 +1,29 @@
+section {
+    display: grid;
+    grid-template-columns: [full-start] minmax(4vmin,auto) 
+    [wide-start] minmax(auto,240px) 
+    [main-start] min(720px, calc(100% - 8vw)) 
+    [main-end] minmax(auto,240px) 
+    [wide-end] minmax(4vmin,auto) 
+    [full-end];
+
+    * {
+        grid-column: main-start/main-end;
+    }
+
+    p, li {
+        font-size: 1.4rem;
+        font-family: $font-post;
+        margin-block-start: 0;
+    }
+
+    li {
+        padding-bottom: .5em;
+    }
+    img {
+        margin-top: 1rem;
+        width: 100%;
+        background-size: contain;
+        background-position: center center;
+    }
+}

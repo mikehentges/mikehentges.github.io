@@ -1,6 +1,7 @@
 ---
 layout: default
 ---
+<section class="post-section">
 {% feed_meta %}
 
 {% if page.hero %}
@@ -11,6 +12,7 @@ layout: default
 {% else %}
 <h1>Untitled post</h1>
 {% endif %}
-{{ page.date | date: "%b %d, %Y" }}
+<p>{{ page.date | date: "%b %d, %Y" }}</p>
+
 {{ content }}
-{% include footer.html %}
+</section>
