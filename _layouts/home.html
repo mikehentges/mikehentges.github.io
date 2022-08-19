@@ -24,7 +24,7 @@ layout: default
                 {% if post.hero %}
                     <img src="{{post.hero}}">
                 {% endif %}
-                <div class="card_content">{{post.excerpt}}</div>
+                <div class="card_content">{{ post.content | markdownify | strip_html | truncatewords: 50 }}</div>
                 
             </div>
         {% endfor %}

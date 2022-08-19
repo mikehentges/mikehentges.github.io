@@ -5,6 +5,7 @@
 @import 'main-title';
 @import 'footer';
 @import 'post';
+@import 'category_list';
 
 #content {
     margin-top: 100px;
@@ -16,7 +17,6 @@ html {
 body {
     font-family: $fonts;
     background-color: white;
-    //padding: $spacing;
     min-height: 100vh;
     //@include flex-center();
     margin: 0;
@@ -47,4 +47,19 @@ p {
 .bottom-title {
     padding: 20px 40px 0px 40px;
     font-size: 2rem;
+}
+
+.page-content {
+        display: grid;
+        grid-template-columns: [full-start] minmax(4vmin, auto) [wide-start] minmax(auto, 240px) [main-start] min(720px, calc(100% - 8vw)) [main-end] minmax(auto, 240px) [wide-end] minmax(4vmin, auto) [full-end];
+        font-size: 1rem;
+
+    * {
+        grid-column: main-start/main-end;
+    }
+
+    p {
+        font-size: $post-font-size;
+        font-family: $font-post;
+    }
 }

@@ -4,11 +4,23 @@ layout: default
 
 <!-- Use any HTML here -->
 
-<h1>Template for category pages</h1>
-<h1>{{page.category}} Page</h1>
-{% for post in site.posts %}
-    {% assign post_match = page.category | downcase %}
-    {% if post.categories contains post_match %}
-        <p>{{post.title}}</p>
-    {% endif %}
-{% endfor %}
+
+<div class="category-list" >
+    <h1>My {{page.category}} posts</h1>
+    {% for post in site.posts %}
+        {% assign post_match = page.category | downcase %}
+        {% if post.categories contains post_match %}
+            <div class="category-item" onclick="window.location.href = '{{post.url | relative_url}}';">   
+                <a href="{{ post.url | relative_url }}" onclick="event.stopPropagation();">
+                    {{post.title}}
+                </a>
+                <br>
+                <p>{{ post.date | date: "%b %d, %Y" }}</p>
+                {% if post.hero %}
+                    <img src="{{post.hero}}">
+                {% endif %}
+                <div class="category-content">{{post.excerpt}}</div>
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>

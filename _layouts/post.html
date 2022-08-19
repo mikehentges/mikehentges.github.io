@@ -5,12 +5,12 @@ layout: default
 {% feed_meta %}
 
 {% if page.hero %}
-    <img src="{{page.hero}}">
+    <img class="hero" src="{{page.hero}}">
 {% endif %}
 {% if page.title%}
-<h1>{{page.title}}</h1>
+<h2>{{page.title}}</h2>
 {% else %}
-<h1>Untitled post</h1>
+<h2>Untitled post</h2>
 {% endif %}
 <p>{{ page.date | date: "%b %d, %Y" }}</p>
 
