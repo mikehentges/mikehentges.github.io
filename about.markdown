@@ -6,10 +6,16 @@ permalink: /about/
 
 ## Michael Hentges
 
-This blog is what happens when a CTO "retires." After working for over 20 years in the contact center space, there were a set of standard technologies that we used every day. Java - J2EE - was the primary development environment for producing VoiceXML content for IVR systems. Our team got pretty good at designing and building mission-critical systems that ran under Tomcat. These were 24x7x365 environments, and most were inside our customer's premise data centers. We did a pretty good job writing complex systems that didn't break - which is no small feat.
+This blog is what happens when a CTO "retires."
 
-There were other ancillary technologies that we would use. CTI (Computer Telephony Integration) systems often require Windows desktop development or browser extensions. Our team also built web applications for code-table maintenance applications and lightweight reporting.
+I've spent most of my career as a system integrator in the Contact Center world. I'm currently open for part-time contract work and am otherwise learning a bunch of new technologies, spending quality time with the family, or diving into an eclectic set of hobbies!
 
-Now that I'm not doing this professionally - and since I'm a technologist at heart - there were many other technologies to learn!
+Things on my learning list right now include:
 
-This blog is my collection of writings on the new (and some not-so-new) things I've been working on lately.
+- **Rust** - I first learned to program in C, graduated to C++, taught these languages, and built several applications on Unix, Windows, and macOS. Eventually, I moved on to Java development - the mainstay of the business world. Rust has captured my imagination, and the old "Unix/C hack" in me appreciates what you can do with it!
+
+- **Go** - Another compiled language! I view Go as an improved version of Java - especially for multi-threaded application development. I like its simplicity and that it compiles down to a single executable with all its dependencies (no more Classpath or tomcat/lib directories!!!).
+
+- **Cloud Architecture** - Contact Center technology has historically followed mainstream IT technology by about five years - which means that moving the contact center to the cloud was just starting about the time I left full-time work. I've been diving more deeply into cloud architecture, Terraform, Serverless, and generally catching up with the rest of the IT world!
+
+- **HTML/CSS/Javascript** - building a blog site has finally caused me to wade into core website development. I've known about and understand how these technologies work - but until now, I haven't had to use them to build something substantial.

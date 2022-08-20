@@ -4,3 +4,6 @@ _site
 .jekyll-metadata
 vendor
 .vscode
+.Identifier
+.png:Zone.Identifier
+.jpg:Zone.Identifier

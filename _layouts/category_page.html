@@ -19,7 +19,7 @@ layout: default
                 {% if post.hero %}
                     <img src="{{post.hero}}">
                 {% endif %}
-                <div class="category-content">{{post.excerpt}}</div>
+                <div class="category-content">{{ post.content | strip_html | truncatewords: 50 }}</div>
             </div>
         {% endif %}
     {% endfor %}
