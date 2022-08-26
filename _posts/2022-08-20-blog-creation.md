@@ -16,7 +16,7 @@ At first, I shied away from [markdown](https://en.wikipedia.org/wiki/Markdown) f
 
 ### The first attempt
 
-My initial technology stack utilized [Ghost](https://ghost.org/) for CRM and [Gatsby](https://www.gatsbyjs.com/) as the site generator. Ghost's page editor is great - easy to use and powerful. But, the connection between Ghost and Gatsby was a little clunky. I also struggled with the formatting and structure I wanted. I didn't have a solid background in HTML and CSS, which made the jump to learning [React](https://reactjs.org/)-based Gatsby toolset difficult for me.
+My initial technology stack utilized [Ghost](https://ghost.org/) for CRM and [Gatsby](https://www.gatsbyjs.com/) as the site generator. Ghost's page editor is great - easy to use and powerful. But, the connection between Ghost and Gatsby was a little clunky. I also struggled with the formatting and structure I wanted. I didn't have a solid background in HTML and CSS, which made the jump to learning the [React](https://reactjs.org/)-based Gatsby toolset difficult for me.
 
 After spinning my wheels for a while, I eventually just pulled out Gatsby and went with a pure Ghost site. Controlling the layout was more manageable, and I could make a structure I was happy with - pushing the site through Gatsby didn't add much value.
 
