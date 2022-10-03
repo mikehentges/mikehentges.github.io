@@ -23,8 +23,8 @@ section {
     .hero {
         margin-top: 1rem;
         width: 100%;
-        background-size: contain;
-        background-position: center center;
+        object-fit: contain;
+        
     }
     img {
         margin-top: 1rem;

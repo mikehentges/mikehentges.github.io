@@ -14,8 +14,10 @@
     
     img {
         height: 10rem;
-        background-size:contain;
-        background-position: center center;
+        object-fit: contain;
+        
+        
+        margin-bottom: 5px;
     }
 
     .card_content {

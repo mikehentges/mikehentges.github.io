@@ -2,31 +2,39 @@
 layout: default
 ---
 
-
-        <div class="main-title">
-        
-        <h1>{{site.title}}</h1>
-        <p>Technology, Programming, Chess, and Woodworking!</p>
-    </div>
+<div class="main-title">
+  <h1>{{site.title}}</h1>
+  <p>Technology, Programming, Chess, and Woodworking!</p>
+</div>
 <div class="bottom">
-    <div class="bottom-title">Recent Posts:</div>
-    <div class="home-card-collection">
-        {% for post in site.posts limit:3 %}
-            <div class="home_card" onclick="window.location.href = '{{post.url | relative_url}}';">
-                <a class="category_link" onclick="event.stopPropagation();"
-                    href="/{{post.categories.first | slugify}}">
-                {{post.categories.first | capitalize}}
-                </a>
-                <a class="heading_link" onclick="event.stopPropagation();"
-                    href="{{ post.url | relative_url }}">
-                    {{post.title}}
-                </a>
-                {% if post.hero %}
-                    <img src="{{post.hero}}">
-                {% endif %}
-                <div class="card_content">{{ post.content | markdownify | strip_html | truncatewords: 50 }}</div>
-                
-            </div>
-        {% endfor %}
+  <div class="bottom-title">Recent Posts:</div>
+  <div class="home-card-collection">
+    {% for post in site.posts limit:3 %}
+    <div
+      class="home_card"
+      onclick="window.location.href = '{{post.url | relative_url}}';"
+    >
+      <a
+        class="category_link"
+        onclick="event.stopPropagation();"
+        href="/{{post.categories.first | slugify}}"
+      >
+        {{post.categories.first | capitalize}}
+      </a>
+      <a
+        class="heading_link"
+        onclick="event.stopPropagation();"
+        href="{{ post.url | relative_url }}"
+      >
+        {{post.title}}
+      </a>
+      {% if post.hero %}
+      <img src="{{post.hero}}" />
+      {% endif %}
+      <div class="card_content">
+        {{ post.content | markdownify | strip_html | truncatewords: 50 }}
+      </div>
     </div>
+    {% endfor %}
+  </div>
 </div>
