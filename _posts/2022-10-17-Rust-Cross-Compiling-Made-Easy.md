@@ -59,7 +59,7 @@ This setup allows a simple ```just build`` command – which I can remember! The
 
 I also created a justfile to run the cross-compile of the main project and automated the deployment of the executable to the Raspberry Pi. The justfile I created looks like this:
 
-{% highlight makefile %}
+```makefile
 TARGET_HOST := "mhentges@shop-therm.local"
 TARGET_PATH := "/home/mhentges/thermostat-pi"
 TARGET_ARCH := "arm-unknown-linux-gnueabihf"
@@ -76,7 +76,7 @@ build:
 
 clippy:
     cargo clippy
-{% endhighlight %}
+```
 
 This script relies on SSH being available between your host machine and the PI, configured with [public key authentication](https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server).  
 
