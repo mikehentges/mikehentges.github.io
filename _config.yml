@@ -47,8 +47,13 @@ permalink: /:slug
 twitter_username: HentgesMike
 github_username: mikehentges
 
-highlighter: rogue
-syntax_highligher: rogue
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter_opts:
+    default_lang: html
+    css_class: "syntax"
 
 sass:
   sass_dir: _sass
