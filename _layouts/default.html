@@ -1,18 +1,16 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-{% feed_meta %}
-<head>
+  {% feed_meta %}
+  <head>
     <!-- Styles-->
-    <link rel="stylesheet" href="/assets/css/styles.css">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="monetization" content="$ilp.uphold.com/3kikPPEakjxe" />
     <title>{{site.title}}</title>
-</head>
+  </head>
 
-<body>
-    {% include header.html %}
-    {{ content }}
-    {% include footer.html %}
-</body>
-
+  <body>
+    {% include header.html %} {{ content }} {% include footer.html %}
+  </body>
 </html>
