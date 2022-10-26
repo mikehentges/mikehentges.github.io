@@ -8,8 +8,8 @@ hero: https://res.cloudinary.com/dbzsk4ytb/image/upload/v1661033621/blog-images/
 
 Chess is a game that is centuries old, originating in western Europe in the 1400s. But despite it's age, it is currently
 played every day by thousands of people across the world. Current fad, or local customs often influence which games kids
-learn - but chess is present in almost every global culture. Chess is usually introduced to kids as another game to play
-- kids play lots of games! But chess's widespread and seemingly never-ending popularity demonstrate that it ends up
+learn - but chess is present in almost every global culture. Chess is usually introduced to kids as another game to
+play - kids play lots of games! But chess's widespread and seemingly never-ending popularity demonstrate that it ends up
 being so much more than that.
 
 Chess isn't like most games. I've played lots of games - they were a staple of my childhood. But only Chess has captured
