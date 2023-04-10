@@ -2,18 +2,26 @@
 layout: default
 ---
 <section class="post-section">
-{% feed_meta %}
+    {% feed_meta %}
 
-{% if page.hero %}
+    {% if page.hero %}
     <img class="hero" src="{{page.hero}}">
-{% endif %}
-{% if page.title%}
-<h2>{{page.title}}</h2>
-{% else %}
-<h2>Untitled post</h2>
-{% endif %}
-<p>{{ page.date | date: "%b %d, %Y" }}</p>
+    {% endif %}
+    {% if page.attrib %}
+    <div>
+        {{page.attrib}}
+    </div>
+    {% endif %}
+    {% if page.title%}
+    <h2>{{page.title}}</h2>
+    {% else %}
+    <h2>Untitled post</h2>
+    {% endif %}
+    <p>{{ page.date | date: "%b %d, %Y" }}</p>
 
-{{ content }}
-<div>Want to encourage more content like this? Please consider <a href="https://www.buymeacoffee.com/mikehentges">buying me a cup of coffee!</a><p></p></div>
+    {{ content }}
+    <div>Want to encourage more content like this? Please consider <a
+            href="https://www.buymeacoffee.com/mikehentges">buying me a cup of coffee!</a>
+        <p></p>
+    </div>
 </section>
