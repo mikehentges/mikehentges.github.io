@@ -7,7 +7,7 @@ hero: https://res.cloudinary.com/dbzsk4ytb/image/upload/v1681039714/blog-images/
 attrib: "(c) fizkes/Adobe Stock - licensed for use"
 ---
 
-Handling errors is hard. Doing it well is one of the key differences between great developers and average ones. Every developer desires solid, robust code that does its job and doesn’t crash – and is easy to maintain. The language designers of Rust have provided unique means of defining and handling errors fundamentally different from the programming languages that preceded it – and is a key contributor to why developers have continuously voted Rust the “most loved language” on Stack Overflow’s yearly developer survey. This article will examine the differences between Rust language’s error-handling mechanisms and prior programming languages and how Rust’s approach is better.
+Handling errors is hard, but Rust's error-handling capabilities give developers great tools for the job. Handling errors well is one of the key differences between great developers and average ones. Every developer desires solid, robust code that does its job and doesn’t crash – and is easy to maintain. The language designers of Rust have provided unique means of defining and handling errors fundamentally different from the programming languages that preceded it – and is a key contributor to why developers have continuously voted Rust the “most loved language” on Stack Overflow’s yearly developer survey. This article will examine the differences between Rust language’s error-handling mechanisms and prior programming languages and how Rust’s approach is better.
 
 ## In the beginning
 
@@ -95,7 +95,7 @@ match my_result {
 }
 ```
 
-Here we have a precise mechanism for knowing if the function returned a valid value or did not work. You do not have to check for a magical “error value”; the enumeration allows for the result to be separate from the error condition.
+Here we have a precise mechanism for knowing if the function returned a valid value or did not work. You do not have to check for a magical “error value”; the enumeration allows the result to be separate from the error condition.
  
 Rust's pattern-matching rules require that your code handle both cases of the enumeration – you can't silently skip error handling as the compiler enforces it. But Rust has a `?` operator that allows you to stop and return `None` if that's what comes back from a function. The following 2 code snippets are identical in function:
 
@@ -171,9 +171,11 @@ error of: No such file or directory (os error 2)
 
 We see that a complete error was propagated back to our main function, where we captured it in our match statement and could print it out to the console.
 
-Our simple examples demonstrate how Rust’s error handling enables cleaner code, where an application can elegantly handle the various conditions that calling an external function might produce. The `?` operator with the `Option` and `Result` enumerations allow for a very clean means of testing for errors, handling them appropriately, and not relying on mixing valid values and error codes. An ability to attach meaningful data to error conditions makes for more robust APIs.
+Our simple examples demonstrate how Rust’s error handling enables cleaner code, where an application can elegantly handle the various conditions that calling an external function might produce. The `?` operator with the `Option` and `Result` enumerations allows for a very clean means of testing for errors, handling them appropriately, and not relying on mixing valid values and error codes. An ability to attach meaningful data to error conditions makes for more robust APIs.
 
-There is more – Rust’s standard libraries have a host of specific functions for managing error states and mapping library errors into user-defined values. External libraries like the `thiserror` crate extend Rust's standard error handling. The `thiserror` crate provides an easy-to-use means of defining specific errors that look and feel exactly like the built-in error types that Rust defines: (example derived from `thiserror` on `docs.rs`)
+## But there's more!
+
+Rust’s standard libraries have a host of specific functions for managing error states and mapping library errors into user-defined values. External libraries like the `thiserror` crate extend Rust's standard error handling. The `thiserror` crate provides an easy-to-use means of defining specific errors that look and feel exactly like the built-in error types that Rust defines: (example derived from `thiserror` on `docs.rs`)
 
 ``` rust
 use thiserror::Error;
@@ -194,7 +196,7 @@ pub enum DataStoreError {
 }
 ```
 
-The `anyhow` crate defines a flexible means of handling multiple error types, and adding application-specific data to errors. Anyhow allows for `Result<T, anyhow::Error>`, or equivalently `anyhow::Result<T>`, as the return type of a function. A function can then return any error type that implements the `std::error::Error` trait. (example derived from `anyhow` on `docs.rs`)
+The `anyhow` crate defines a flexible means of handling multiple error types and adding application-specific data to errors. Anyhow allows for `Result<T, anyhow::Error>`, or equivalently `anyhow::Result<T>`, as the function's return type. A function can then return any error type that implements the `std::error::Error` trait. (example derived from `anyhow` on `docs.rs`)
 
 ``` rust
 use anyhow::Result;
@@ -211,6 +213,8 @@ fn get_cluster_info() -> Result<ClusterMap> {
 }
 ```
 
+## In summary
+
 Our simple examples show how Rust’s error handling significantly differs from prior common programming languages. Rust provides a clean means of separating good vs. bad results from functions without introducing boilerplate that litters our source code. And we have the tools needed to define new error types that work cleanly within our library or application. 
 
-Designing appropriate error handling is still a hard job – but Rust at least gives us the tools to do a good job of it! And this is more than aesthetics – better error handling allows errors to be more visible in an application and decreases application defects due to not handling error conditions correctly. It also contributes to cleaner and simpler designs – by definition, better designs – which make applications more robust and easier to develop correctly. This is a solid contributor to the Rust programming language’s high interest and “love” from developers!
+Designing appropriate error handling is still hard – but Rust at least gives us the tools to do a good job of it! And this is more than aesthetics – better error handling allows errors to be more visible in an application and decreases application defects due to not handling error conditions correctly. It also contributes to cleaner and simpler designs – by definition, better designs – which make applications more robust and easier to develop correctly. This is a solid contributor to the Rust programming language’s high interest and “love” from developers!
