@@ -9,6 +9,8 @@ attrib: "(c) fizkes/Adobe Stock - licensed for use"
 
 Handling errors is hard. Doing it well is one of the key differences between great developers and average ones. Every developer desires solid, robust code that does its job and doesn’t crash – and is easy to maintain. The language designers of Rust have provided unique means of defining and handling errors fundamentally different from the programming languages that preceded it – and is a key contributor to why developers have continuously voted Rust the “most loved language” on Stack Overflow’s yearly developer survey. This article will examine the differences between Rust language’s error-handling mechanisms and prior programming languages and how Rust’s approach is better.
 
+## In the beginning
+
 The C programming language was introduced in the 1970s and became the first widely popular coding language. But its error-handling mechanisms are rudimentary. The following is very typical and idiomatic C code for reading from a file:
 
 ``` c
@@ -26,7 +28,9 @@ What's surprising about this code (at least to non-C developers) is that `fread(
 
 This pattern of intermixing valid return values with error codes is pervasive in C and in most other programming languages where a function can only return a single value. C has a global ERRNO value that may have more information about what went wrong, but in general, you don't get a lot of extra data about what kind of error occurred. When you can only return one value from a function and want the function to return useful data, you must mix error codes with the return values. This can cause problems – the return value must be something that is not in the set of valid values. We see -1 and 0 used as “magical error return values” in many functions to indicate an error has occurred. 
 
-To do better, C++ introduced structured error handling – the try/catch/throw mechanism that allowed errors to be triggered in one place, have additional data attached to the error, and differentiate between different kinds of errors. 
+## Structured Error Handling
+
+To do better, C++ (and later, Java) introduced structured error handling – the try/catch/throw mechanism that allowed errors to be triggered in one place, have additional data attached to the error, and differentiate between different kinds of errors. 
 
 ``` cpp
 #include <iostream>
@@ -64,6 +68,8 @@ Exception handling also introduces problems in multi-threaded applications – s
 
 Structured error handling is not meant for “normal” error conditions – it is meant for errors that disrupt an application’s normal flow, not routine return values from a function. A string find operation that returns the position of a character inside of a string wouldn’t throw an exception if it can’t find the intended character – it would instead return some “not found” result. The C function `strchr()` does this – it returns either a pointer to the character found or the magical value `null`, indicating failure. You wouldn’t expect this function to throw an exception if it can’t find a character. Exception handling only attempts to solve part of the problem of returning error conditions out of functions.
 
+## A Different approach
+
 Go took a novel approach – it allows functions to return multiple values instead of one. You will frequently see the following in Golang code: 
 
 ``` go
@@ -73,9 +79,11 @@ if err != nil {
 }
 ```
 
-Here both an error code and the value you need are returned from a function – they do not try to occupy the same spot. It's up to the programmer to check the error value, and `if err != nil` statements are littered throughout Go code. But sometimes you don't want to deal with the error – there's nothing useful to do – and you want to return it from your function. There is a significant amount of boilerplate error-handling code in Go programs to check for errors on each function call in an application, as there is no other way to handle the error.
+Here both the error code and the value you need are returned from a function – they do not try to occupy the same spot. But, the error value placeholder is present when an error does not occur. It's up to the programmer to check the error value, and `if err != nil` statements are littered throughout Go code. But sometimes you don't want to deal with the error – there's nothing useful to do – and you want to return it from your function. There is a significant amount of boilerplate error-handling code in Go programs to check for errors on each function call in an application, as there is no other way to handle the error.
 
-Rust has a novel approach to error handling that leverages Rust’s enumerations. Enumerations in Rust are algebraic data types – they support data values, not just constants. Two special-purpose enumerations are used to handle return values: `Option` and `Result`. `Option` is used when a function may or may not return a useful value – you get a `Some(value)` or `None` as your values. Using our find a character in a string example, the Rust function `find` returns an `Option` enumeration – it will have a value of `Some(x)` with `x` being the character’s position or a value of `None`. You can use Rust’s pattern-matching mechanism to handle these conditions elegantly:
+## Rust's approach
+
+Rust has a novel approach to error handling that leverages Rust’s enumerations. Enumerations in Rust are algebraic data types – they support data values, not just constants. Two special-purpose enumerations are commonly used to handle return values: `Option` and `Result`. `Option` is used when a function may or may not return a useful value – you get a `Some(value)` or `None` as your values. Using our find a character in a string example, the Rust function `find` returns an `Option` enumeration – it will have a value of `Some(x)` with `x` being the character’s position or a value of `None`. You can use Rust’s pattern-matching mechanism to handle these conditions elegantly:
 
 ``` rust
 let a_string = "testing".to_string();
@@ -165,7 +173,7 @@ We see that a complete error was propagated back to our main function, where we 
 
 Our simple examples demonstrate how Rust’s error handling enables cleaner code, where an application can elegantly handle the various conditions that calling an external function might produce. The `?` operator with the `Option` and `Result` enumerations allow for a very clean means of testing for errors, handling them appropriately, and not relying on mixing valid values and error codes. An ability to attach meaningful data to error conditions makes for more robust APIs.
 
-There is more – Rust’s libraries have a host of specific functions for managing error states and mapping library errors into user-defined values. The `thiserror` crate extends Rust's standard error handling by providing an easy-to-use means of defining specific errors that look and feel exactly like the built-in error types that Rust defines: (example derived from `thiserror` on `docs.rs`)
+There is more – Rust’s standard libraries have a host of specific functions for managing error states and mapping library errors into user-defined values. External libraries like the `thiserror` crate extend Rust's standard error handling. The `thiserror` crate provides an easy-to-use means of defining specific errors that look and feel exactly like the built-in error types that Rust defines: (example derived from `thiserror` on `docs.rs`)
 
 ``` rust
 use thiserror::Error;
