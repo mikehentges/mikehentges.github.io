@@ -3,7 +3,7 @@ layout: post
 title: Rust, Lambda, and DynamoDB
 date: 18-11-2022
 categories: programming
-hero: https://res.cloudinary.com/dbzsk4ytb/image/upload/v1668802185/blog-images/Rust-Lambda/Rust_In_Action_rhku1c.png
+hero: https://res.cloudinary.com/dbzsk4ytb/image/upload/c_scale,w_720/v1668802185/blog-images/Rust-Lambda/Rust_In_Action_rhku1c.png
 ---
 
 As part of my journey to learn more about Rust development, I developed a Lambda service hosted on AWS that writes to a DynamoDB database and an associated Rust HTTP client. Along with Rust, I used Terraform to manage the deployment of the AWS resources. This article is the 4th I've written on my Wireless Thermostat application that runs on a Raspberry Pi. You can find the others here: [Raspberry Pi Wireless Thermostat - in Rust](https://medium.com/@mikehentges65/raspberry-pi-wireless-thermostat-in-rust-45a5d35196cf), [Rust Cross Compiling Made Easy](https://medium.com/@mikehentges65/rust-cross-compiling-made-easy-e30fcb233fef), and [Implementing Multi-Threaded Shared Memory in Rust](https://betterprogramming.pub/easy-multi-threaded-shared-memory-in-rust-57344e9e8b97). We are going to cover the following in this article:

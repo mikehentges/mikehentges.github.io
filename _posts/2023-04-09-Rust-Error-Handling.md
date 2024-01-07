@@ -3,7 +3,7 @@ layout: post
 title: Rust's great error handling capability.
 date: 09-04-2023
 categories: programming
-hero: https://res.cloudinary.com/dbzsk4ytb/image/upload/v1681039714/blog-images/ErrorHandling_z10t3w.jpg
+hero: https://res.cloudinary.com/dbzsk4ytb/image/upload/c_scale,w_720/v1681039714/blog-images/ErrorHandling_z10t3w.jpg
 attrib: "(c) fizkes/Adobe Stock - licensed for use"
 ---
 
