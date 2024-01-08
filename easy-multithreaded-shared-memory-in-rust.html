@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+  <link type="application/atom+xml" rel="alternate" href="https://mikehentges.github.io/feed.xml" title="Michael Hentges Blog" />
+  <head>
+    <!-- Styles-->
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="monetization" content="$ilp.uphold.com/3kikPPEakjxe" />
+    <title>Michael Hentges Blog</title>
+  </head>
+
+  <body>
+    <!-- This is our header. -->
+
+<header>
+    <link rel="icon" type="image/x-icon" href="/logo-color.ico">
+
+    <div class="header_title">Michael Hentges Blog</div>
+    <div class="header_menu">
+        <ul>
+            <li><a href="/">Home</a></li>
+            
+            
+                <li><a href="/ai">AI</a></li>
+            
+                <li><a href="/programming">Programming</a></li>
+            
+                <li><a href="/chess">Chess</a></li>
+            
+                <li><a href="/woodworking">Woodworking</a></li>
+            
+            <li><a href="/about">About</a></li>
+        </ul>
+    </div>
+    
+</header> <section class="post-section">
+    <link type="application/atom+xml" rel="alternate" href="https://mikehentges.github.io/feed.xml" title="Michael Hentges Blog" />
+
+    
+    <img class="hero" src="https://res.cloudinary.com/dbzsk4ytb/image/upload/c_scale,w_720/v1666362943/blog-images/AdobeStock_93027465_qcp9os.jpg">
+    
+    
+    
+    <h2>Easy multi-threaded shared memory in rust</h2>
+    
+    <p>Oct 31, 2022</p>
+
+    <p>This article is the 3rd in a series related to building a wireless thermostat in Rust, running on a Raspberry Pi –
+although this one has very little to do with the Raspberry Pi and is more relevant to any multi-threaded application.
+When creating my application, I implemented a simple and effective design for controlling multi-threaded access to
+shared memory. You can find the previous articles
+here: <a href="https://mhentges.com/rpi-thermostat">first article - Raspberry Pi Wireless Thermostat in Rust</a>
+and <a href="https://mhentges.com/rust-cross-compiling-made-easy">second article - Cross Compiling Made Easy</a>. I have a few code
+snippets below, but you can find the entire code repository <a href="https://github.com/mikehentges/thermostat-pi">on github</a>.</p>
+
+<h2 id="first-the-back-story">First, the back story:</h2>
+
+<p>When designing a multi-threaded application, one of the core considerations is how the different threads share data.
+There’s always something that the threads share – you’re spinning off threads to work on a shared problem, after all. If
+nothing else, configuration data or database connection pools have to be shared. There are two main ways of approaching
+this problem.</p>
+
+<ol>
+  <li><strong>Message Passing</strong> – channels between threads allow data to be sent and received between them. Message passing is
+the mechanism that golang prefers, as the golang documentation states: “Do not communicate by sharing memory;
+instead, share memory by communicating.” Rust supports creating channels; you can find more information in the Rust
+Book’s chapter on <a href="https://doc.rust-lang.org/book/ch16-02-message-passing.html">message passing</a>.</li>
+  <li><strong>Shared-State</strong> – a set of data identified as a shared state. Each thread access a shared data area through
+thread-safe protection mechanisms – typically a Mutex. Locks on the data allow you to access the data safely, reading
+or updating the data as needed, and then the lock is released. Only one thread can read or write the data at a time.
+The Rust Book’s <a href="https://doc.rust-lang.org/book/ch16-03-shared-state.html">shared state</a> section describes these
+mechanisms.</li>
+</ol>
+
+<p>Both approaches work, and Rust has good support for both mechanisms in the standard library. To choose between them,
+consider the following.</p>
+
+<ol>
+  <li><strong>What are the access patterns?</strong> Will threads mainly read data, mostly write data, or both?</li>
+  <li><strong>How will deadlock be avoided?</strong> Avoiding deadlock is a primary concern for multi-threaded applications – nothing is
+worse than having a bunch of threads available to do work, and they are all stuck waiting for the other ones to get
+out of the way.</li>
+  <li><strong>Performance.</strong> While over-engineering for performance is a common fault, having some idea of the performance
+requirements of your solution is essential. I’m a big fan of the rule: <em>keep the solution as simple as possible, but
+no simpler</em>.</li>
+</ol>
+
+<p>I decided on a shared state approach for the application I am creating. This decision also implied that my worker
+threads would work by polling – checking on things periodically instead of receiving an outside message. Here is what
+led me to that conclusion.</p>
+
+<ol>
+  <li>I have three main threads. One is a web interface that allows for reading/writing of the shared state (get
+temperature, get thermostat setting, set thermostat setting). The web interface is, by definition, a creator of
+unscheduled activity – things come in based on an external client’s action and are not under the application’s
+control. Second, a pair of background worker threads react to the application’s environment. The first reads the
+temperature sensor, and the second calculates whether the thermostat should be set on or off and controls the
+physical relay to make that happen. The thermostat is in a separate thread, as it could turn on/off when the
+temperature crosses a threshold, or we receive a new thermostat setting from the web interface.</li>
+  <li>I didn’t have to worry about contention with only three threads (assuming a single external client on the web
+interface). A simple shared state approach wouldn’t run into issues based on too many threads trying to access locks
+simultaneously.</li>
+  <li>The logic for determining the thermostat’s state has a time component. We don’t want frequent, short bursts of
+on/off, which thrash the furnace. We enforce a minimum amount of time that the thermostat will be on or off before
+switching to another state. Accurately reacting to a message (the temperature reading or thermostat value changes)
+requires knowing how long it’s been since the thermostat changed.</li>
+</ol>
+
+<p>A shared state made sense based on these requirements. My design enforces a low thread count, so contention was not an
+issue (a common problem with shared state approaches). I need to keep track of time, so some state data was always
+required. Implementing two different state data mechanisms in the same application would be added complexity. With each
+thread doing its own thing and getting/setting shared state independently, we isolate each thread from the others. This
+choice led to a simpler overall application design.</p>
+
+<p>But, as I reviewed the Rust Book’s content on <a href="https://doc.rust-lang.org/book/ch16-03-shared-state.html">shared-state</a>,
+the complexity of managing access from each thread seemed daunting. Plus, sprinkling thread-locking code in the
+application made it a mess – my nice single-purpose functions now had Mutex locking logic. Also, when accessing data
+through a Mutex’s lock dealing with Rust’s borrow checker across threads proved challenging.</p>
+
+<h2 id="a-simpler-approach">A simpler approach:</h2>
+
+<p>To make this manageable, I used an approach I’ve used before on C++ projects – encapsulating the shared data into a
+separate class and pushing all Mutex logic into the class. Rust doesn’t have classes, but a couple of structs did the
+trick.</p>
+
+<p>To start, I created a struct to hold all the shared state data in a single place. Then I could deal with a single
+reference to this struct instead of managing each data element independently.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">pub</span> <span class="k">struct</span> <span class="n">SharedData</span> <span class="p">{</span>
+    <span class="n">continue_background_tasks</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">current_temp</span><span class="p">:</span> <span class="nb">f32</span><span class="p">,</span>
+    <span class="n">thermostat_value</span><span class="p">:</span> <span class="nb">usize</span><span class="p">,</span>
+    <span class="n">thermostat_on</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">thermostat_change_datetime</span><span class="p">:</span> <span class="n">OffsetDateTime</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Then we define a struct that holds an Arc pointer – an Atomic Reference Count pointer to a Mutex that guards our shared
+data struct. We use this struct to control access to/from our shared data.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">pub</span> <span class="k">struct</span> <span class="n">AccessSharedData</span> <span class="p">{</span>
+    <span class="k">pub</span> <span class="n">sd</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">Mutex</span><span class="o">&lt;</span><span class="n">SharedData</span><span class="o">&gt;&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We will make many copies of this pointer – they all point to our Mutex, which is how we gain access to our shared memory
+space. We do this by customizing the Clone() method for AccessSharedData – it looks like the following.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="c">// Clone here makes a copy of the Arc pointer - not  the entire class of data</span>
+<span class="c">// All clones point to the same internal data</span>
+<span class="k">impl</span> <span class="n">Clone</span> <span class="k">for</span> <span class="n">AccessSharedData</span> <span class="p">{</span>
+    <span class="k">fn</span> <span class="nf">clone</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">Self</span> <span class="p">{</span>
+        <span class="n">AccessSharedData</span> <span class="p">{</span>
+            <span class="n">sd</span><span class="p">:</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">clone</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="py">.sd</span><span class="p">),</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>To use this, we first create an instance of our SharedData struct (the simple .new() method isn’t shown above but is
+straightforward).</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">let</span> <span class="n">common_data</span> <span class="o">=</span> <span class="nn">SharedData</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span>
+    <span class="k">true</span><span class="p">,</span>
+    <span class="n">configuration</span><span class="py">.initial_thermostat_value</span> <span class="k">as</span> <span class="nb">f32</span> <span class="o">+</span> <span class="mf">5.0</span><span class="p">,</span>
+    <span class="n">configuration</span><span class="py">.initial_thermostat_value</span><span class="p">,</span>
+    <span class="k">false</span><span class="p">,</span>
+    <span class="nn">OffsetDateTime</span><span class="p">::</span><span class="n">UNIX_EPOCH</span><span class="p">,</span>
+<span class="p">);</span>
+</code></pre></div></div>
+
+<p>Then, we initialize an instance of AccessSharedData.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="c">// The wrapper around our shared data that gives it safe access across threads</span>
+<span class="k">let</span> <span class="n">sd</span> <span class="o">=</span> <span class="n">AccessSharedData</span> <span class="p">{</span>
+    <span class="n">sd</span><span class="p">:</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="nn">Mutex</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">common_data</span><span class="p">)),</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>We then give each thread we spawn() a cloned copy of the AccessSharedData struct. The clone call creates a copy of the
+Arc pointer, which we then move into the new thread. A similar method passes in a clone of the AccessSharedData struct
+to the actix_web HttpServer::new() method, so it is also available in HTTP client handlers.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="c">// Create another clone of our pointer to shared data, and send it into a new thread that continuously</span>
+<span class="c">// checks to see how the current temperature and current thermostat setting compare - and will</span>
+<span class="c">// trigger turning on the relay for the furnace as needed.</span>
+<span class="k">let</span> <span class="n">sdc</span> <span class="o">=</span> <span class="n">sd</span><span class="nf">.clone</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">control_handle</span> <span class="o">=</span> <span class="nf">spawn</span><span class="p">(</span> <span class="k">async</span> <span class="k">move</span> <span class="p">{</span>
+    <span class="nn">tracing</span><span class="p">::</span><span class="n">debug</span> <span class="o">!</span> <span class="p">(</span><span class="s">"kicking off control_thermostat"</span><span class="p">);</span>
+    <span class="k">match</span> <span class="nf">run_control_thermostat</span><span class="p">(</span> <span class="o">&amp;</span> <span class="n">sdc</span><span class="p">,</span> <span class="n">configuration</span><span class="py">.poll_interval</span><span class="p">)</span><span class="k">.await</span> <span class="p">{</span>
+        <span class="nf">Ok</span><span class="p">(</span><span class="mi">_</span><span class="p">)</span> <span class="k">=&gt;</span> <span class="nn">tracing</span><span class="p">::</span><span class="n">info</span> <span class="o">!</span> <span class="p">(</span><span class="s">"control_thermostat ended"</span><span class="p">),</span>
+        <span class="nf">Err</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">=&gt;</span> <span class="nn">tracing</span><span class="p">::</span><span class="n">error</span> <span class="o">!</span> <span class="p">(</span><span class="s">"control_thermostat returned an error {:?}"</span><span class="p">,</span> <span class="n">e</span><span class="p">),</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>Now that everyone has a copy of the Arc pointer, we need to create a means to use it to read/write our shared data
+struct. A simple set of getters/setters for each member of our struct handles the task of acquiring a lock,
+getting/setting the data, and automatically releasing the lock. By putting this logic surrounding the get/set and
+utilizing the end of the method as a scope boundary to force the lock to be released, we gain control over the access to
+our data.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">impl</span> <span class="n">AccessSharedData</span> <span class="p">{</span>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">continue_background_tasks</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">bool</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">self</span><span class="py">.sd</span><span class="nf">.lock</span><span class="p">()</span><span class="nf">.unwrap</span><span class="p">();</span>
+        <span class="n">lock</span><span class="py">.continue_background_tasks</span>
+    <span class="p">}</span>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">set_continue_background_tasks</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">new_val</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="k">mut</span> <span class="n">lock</span> <span class="o">=</span> <span class="k">self</span><span class="py">.sd</span><span class="nf">.lock</span><span class="p">()</span><span class="nf">.unwrap</span><span class="p">();</span>
+        <span class="n">lock</span><span class="py">.continue_background_tasks</span> <span class="o">=</span> <span class="n">new_val</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="c">//repeated for remaining struct members</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>When each get/set function returns, the lock is released. This approach also means it is impossible to deadlock around
+access to the structure – everything is locked and released immediately and prohibits anything else from getting in the
+way. With all of our locking mechanisms in place, using the shared data in the rest of our application is trivial.</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="n">sd</span><span class="nf">.set_current_temp</span><span class="p">(</span><span class="n">temp_f</span><span class="p">);</span>
+<span class="k">let</span> <span class="n">temp_now</span> <span class="o">=</span> <span class="n">sd</span><span class="nf">.current_temp</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">thermostat_now</span> <span class="o">=</span> <span class="n">sd</span><span class="nf">.thermostat_value</span><span class="p">();</span>
+</code></pre></div></div>
+
+<h2 id="in-summary">In Summary</h2>
+
+<p>This strategy is encapsulation at its finest. Application code uses straightforward calls to methods to get/set the
+shared data elements whenever needed. Behind the scenes, we manage the Mutex’s locking for that access to be thread-safe
+and safe from deadlocks. And Rust’s borrow checker is extremely happy that we aren’t allowing direct shared mutable
+references to our shared data. If needed, you could easily extend this design pattern to implement a more robust access
+pattern.</p>
+
+<p>Putting locking logic inside getters/setters enables our shared data struct to hide the complexities of multi-threaded
+access – much like the standard library does for thread-safe collections. Using clones of an Arc makes it possible to
+acquire a handle to the shared memory struct in each thread. These two concepts are the core ideas that make our Easy
+Shared Data design pattern work.</p>
+
+
+    <div>Want to encourage more content like this? Please consider <a
+            href="https://www.buymeacoffee.com/mikehentges">buying me a cup of coffee!</a>
+        <p></p>
+    </div>
+</section> <!-- This is our footer. -->
+<footer>
+  <div class="footer-bottom">
+    <div class="author">Michael Hentges Blog © 2022</div>
+    <div class="author">
+      <a rel="me" href="https://hachyderm.io/@mhentges">Mastodon</a>
+    </div>
+    <div class="tool">
+      Powered by <a href="https://jekyllrb.com/">Jekyl</a> and
+      <a href="https://pages.github.com/">GitHub Pages</a>
+    </div>
+  </div>
+</footer>
+
+  </body>
+</html>

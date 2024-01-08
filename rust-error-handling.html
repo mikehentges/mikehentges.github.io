@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+  <link type="application/atom+xml" rel="alternate" href="https://mikehentges.github.io/feed.xml" title="Michael Hentges Blog" />
+  <head>
+    <!-- Styles-->
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="monetization" content="$ilp.uphold.com/3kikPPEakjxe" />
+    <title>Michael Hentges Blog</title>
+  </head>
+
+  <body>
+    <!-- This is our header. -->
+
+<header>
+    <link rel="icon" type="image/x-icon" href="/logo-color.ico">
+
+    <div class="header_title">Michael Hentges Blog</div>
+    <div class="header_menu">
+        <ul>
+            <li><a href="/">Home</a></li>
+            
+            
+                <li><a href="/ai">AI</a></li>
+            
+                <li><a href="/programming">Programming</a></li>
+            
+                <li><a href="/chess">Chess</a></li>
+            
+                <li><a href="/woodworking">Woodworking</a></li>
+            
+            <li><a href="/about">About</a></li>
+        </ul>
+    </div>
+    
+</header> <section class="post-section">
+    <link type="application/atom+xml" rel="alternate" href="https://mikehentges.github.io/feed.xml" title="Michael Hentges Blog" />
+
+    
+    <img class="hero" src="https://res.cloudinary.com/dbzsk4ytb/image/upload/c_scale,w_720/v1681039714/blog-images/ErrorHandling_z10t3w.jpg">
+    
+    
+    <div>
+        (c) fizkes/Adobe Stock - licensed for use
+    </div>
+    
+    
+    <h2>Rust's great error handling capability.</h2>
+    
+    <p>Apr 09, 2023</p>
+
+    <p>Handling errors is hard, but Rust’s error-handling capabilities give developers great tools for the job. Handling errors well is one of the key differences between great developers and average ones. Every developer desires solid, robust code that does its job and doesn’t crash – and is easy to maintain. The language designers of Rust have provided unique means of defining and handling errors fundamentally different from the programming languages that preceded it – and is a key contributor to why developers have continuously voted Rust the “most loved language” on Stack Overflow’s yearly developer survey. This article will examine the differences between Rust language’s error-handling mechanisms and prior programming languages and how Rust’s approach is better.</p>
+
+<h2 id="in-the-beginning">In the beginning</h2>
+
+<p>The C programming language was introduced in the 1970s and became the first widely popular coding language. But its error-handling mechanisms are rudimentary. The following is very typical and idiomatic C code for reading from a file:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="kt">void</span> <span class="nf">a_test</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">FILE</span> <span class="o">*</span><span class="n">fp</span> <span class="o">=</span> <span class="n">fopen</span><span class="p">(</span><span class="s">"filename"</span><span class="p">,</span> <span class="s">"r"</span><span class="p">);</span>
+  <span class="kt">char</span> <span class="n">buff</span><span class="p">[</span><span class="mi">255</span><span class="p">];</span>
+
+  <span class="k">while</span><span class="p">(</span><span class="n">fread</span><span class="p">(</span><span class="n">buff</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="n">fp</span><span class="p">))</span> <span class="p">{</span>
+  <span class="c1">// do something with buff</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>What’s surprising about this code (at least to non-C developers) is that <code class="language-html highlighter-rouge">fread()</code> does not return a <code class="language-html highlighter-rouge">bool</code> value – it returns a value of type <code class="language-html highlighter-rouge">size_t</code> (or <code class="language-html highlighter-rouge">int</code>), which is the number of bytes read. The rules of C state that the integer value 0 is treated as false; anything else is true. So our loop keeps going as long as the <code class="language-html highlighter-rouge">fread()</code> function returns some bytes. When a zero is returned, either an error happened or we’ve reached the end of the file.</p>
+
+<p>This pattern of intermixing valid return values with error codes is pervasive in C and in most other programming languages where a function can only return a single value. C has a global ERRNO value that may have more information about what went wrong, but in general, you don’t get a lot of extra data about what kind of error occurred. When you can only return one value from a function and want the function to return useful data, you must mix error codes with the return values. This can cause problems – the return value must be something that is not in the set of valid values. We see -1 and 0 used as “magical error return values” in many functions to indicate an error has occurred.</p>
+
+<h2 id="structured-error-handling">Structured Error Handling</h2>
+
+<p>To do better, C++ (and later, Java) introduced structured error handling – the try/catch/throw mechanism that allowed errors to be triggered in one place, have additional data attached to the error, and differentiate between different kinds of errors.</p>
+
+<div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="cp">#include &lt;iostream&gt;
+</span>
+<span class="kt">int</span> <span class="nf">call_a_function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"inside of my function"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">throw</span><span class="p">(</span><span class="s">"some error"</span><span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"we will not get this far"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">42</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">argv</span><span class="p">[])</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">my_answer</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Hello, World!"</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="n">my_answer</span> <span class="o">=</span> <span class="n">call_a_function</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"An error has occurred: "</span> <span class="o">&lt;&lt;</span> <span class="n">s</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+        <span class="n">my_answer</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"My answer is: "</span> <span class="o">&lt;&lt;</span> <span class="n">my_answer</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">Output</span><span class="o">:</span>
+<span class="n">Hello</span><span class="p">,</span> <span class="n">World</span><span class="o">!</span>
+<span class="n">inside</span> <span class="n">of</span> <span class="n">my</span> <span class="n">function</span>
+<span class="n">An</span> <span class="n">error</span> <span class="n">has</span> <span class="n">occurred</span><span class="o">:</span> <span class="n">some</span> <span class="n">error</span>
+<span class="n">My</span> <span class="n">answer</span> <span class="n">is</span><span class="o">:</span> <span class="o">-</span><span class="mi">1</span>
+</code></pre></div></div>
+
+<p>While exception handling did allow for cleanly separating errors from valid return values, this approach has fundamental problems. People have written lengthy arguments about the issues with structured error handling (<a href="https://www.lighterra.com/papers/exceptionsharmful/">Exception Handling Considered Harmful</a>, for example). The main drawback with exception handling is that it introduces an alternate flow path for a program that is hard to see as a developer, much less control. When the exception is thrown, we do not know who will catch it – it could be several functions up the call stack. Also, a function catching an exception might be surprised by who threw the exception – we cannot choose which functions we want to catch exceptions from – anything that runs underneath our called function is possible.</p>
+
+<p>Exception handling also introduces problems in multi-threaded applications – separating exception handling across threads is difficult. Java’s requirement that any function that could throw an exception list the exceptions in its method definition is also repetitive and verbose.</p>
+
+<p>Structured error handling is not meant for “normal” error conditions – it is meant for errors that disrupt an application’s normal flow, not routine return values from a function. A string find operation that returns the position of a character inside of a string wouldn’t throw an exception if it can’t find the intended character – it would instead return some “not found” result. The C function <code class="language-html highlighter-rouge">strchr()</code> does this – it returns either a pointer to the character found or the magical value <code class="language-html highlighter-rouge">null</code>, indicating failure. You wouldn’t expect this function to throw an exception if it can’t find a character. Exception handling only attempts to solve part of the problem of returning error conditions out of functions.</p>
+
+<h2 id="a-different-approach">A Different approach</h2>
+
+<p>Go took a novel approach – it allows functions to return multiple values instead of one. You will frequently see the following in Golang code:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="n">return_value</span><span class="p">,</span> <span class="n">err</span> <span class="o">=</span> <span class="n">my_func</span><span class="p">();</span>
+<span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+	<span class="k">return</span> <span class="n">err</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Here both the error code and the value you need are returned from a function – they do not try to occupy the same spot. But, the error value placeholder is present when an error does not occur. It’s up to the programmer to check the error value, and <code class="language-html highlighter-rouge">if err != nil</code> statements are littered throughout Go code. But sometimes you don’t want to deal with the error – there’s nothing useful to do – and you want to return it from your function. There is a significant amount of boilerplate error-handling code in Go programs to check for errors on each function call in an application, as there is no other way to handle the error.</p>
+
+<h2 id="rusts-approach">Rust’s approach</h2>
+
+<p>Rust has a novel approach to error handling that leverages Rust’s enumerations. Enumerations in Rust are algebraic data types – they support data values, not just constants. Two special-purpose enumerations are commonly used to handle return values: <code class="language-html highlighter-rouge">Option</code> and <code class="language-html highlighter-rouge">Result</code>. <code class="language-html highlighter-rouge">Option</code> is used when a function may or may not return a useful value – you get a <code class="language-html highlighter-rouge">Some(value)</code> or <code class="language-html highlighter-rouge">None</code> as your values. Using our find a character in a string example, the Rust function <code class="language-html highlighter-rouge">find</code> returns an <code class="language-html highlighter-rouge">Option</code> enumeration – it will have a value of <code class="language-html highlighter-rouge">Some(x)</code> with <code class="language-html highlighter-rouge">x</code> being the character’s position or a value of <code class="language-html highlighter-rouge">None</code>. You can use Rust’s pattern-matching mechanism to handle these conditions elegantly:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">let</span> <span class="n">a_string</span> <span class="o">=</span> <span class="s">"testing"</span><span class="nf">.to_string</span><span class="p">();</span>
+<span class="k">let</span> <span class="n">my_result</span> <span class="o">=</span> <span class="n">a_string</span><span class="nf">.find</span><span class="p">(</span><span class="sc">'a'</span><span class="p">);</span>
+
+<span class="k">match</span> <span class="n">my_result</span> <span class="p">{</span>
+    <span class="nf">Some</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="k">=&gt;</span> <span class="nd">println!</span><span class="p">(</span><span class="s">"I found the character at position: {}"</span><span class="p">,</span> <span class="n">pos</span><span class="p">),</span>
+    <span class="nb">None</span> <span class="k">=&gt;</span> <span class="nd">println!</span><span class="p">(</span><span class="s">"I did not find the character"</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Here we have a precise mechanism for knowing if the function returned a valid value or did not work. You do not have to check for a magical “error value”; the enumeration allows the result to be separate from the error condition.</p>
+
+<p>Rust’s pattern-matching rules require that your code handle both cases of the enumeration – you can’t silently skip error handling as the compiler enforces it. But Rust has a <code class="language-html highlighter-rouge">?</code> operator that allows you to stop and return <code class="language-html highlighter-rouge">None</code> if that’s what comes back from a function. The following 2 code snippets are identical in function:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">fn</span> <span class="nf">string_test</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nb">usize</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="n">a_string</span> <span class="o">=</span> <span class="s">"testing"</span><span class="nf">.to_string</span><span class="p">();</span>
+    <span class="k">if</span> <span class="k">let</span> <span class="nf">Some</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span> <span class="o">=</span> <span class="n">a_string</span><span class="nf">.find</span><span class="p">(</span><span class="sc">'a'</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nd">println!</span><span class="p">(</span><span class="s">"I found the character at position: {}"</span><span class="p">,</span> <span class="n">pos</span><span class="p">);</span>
+        <span class="nf">Some</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="nb">None</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>And</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">fn</span> <span class="nf">string_test</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nb">usize</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="n">a_string</span> <span class="o">=</span> <span class="s">"testing"</span><span class="nf">.to_string</span><span class="p">();</span>
+    <span class="k">let</span> <span class="n">pos</span> <span class="o">=</span> <span class="n">a_string</span><span class="nf">.find</span><span class="p">(</span><span class="sc">'a'</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+    <span class="nd">println!</span><span class="p">(</span><span class="s">"I found the character at position: {}"</span><span class="p">,</span> <span class="n">pos</span><span class="p">);</span>
+
+    <span class="nf">Some</span><span class="p">(</span><span class="n">pos</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The <code class="language-html highlighter-rouge">?</code> operator “unwraps” the <code class="language-html highlighter-rouge">Option</code>, pulling the value out or returning from the calling function the value <code class="language-html highlighter-rouge">None</code> if it is not there. Note that we are not bypassing the error handling – it is still occurring, and the Rust compiler does it for us automatically. This is very clean and does not clutter the code – making it easier to follow the flow of the function.</p>
+
+<p>The second enumeration used in error handling is <code class="language-html highlighter-rouge">Result</code>. The two possible values of Result are <code class="language-html highlighter-rouge">Ok(T)</code> and <code class="language-html highlighter-rouge">Err(E)</code>. Here we are returning an error value, and not a plain <code class="language-html highlighter-rouge">None</code> so that we can pass more information back to the calling function when there is an error. Here is an example function that is reading a file, where it returns an error back to the calling function if the file does not exist or there is some other type of error reading the file:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">fn</span> <span class="nf">get_data</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="o">&amp;</span><span class="nb">str</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="n">Result</span><span class="o">&lt;</span><span class="nb">String</span><span class="p">,</span> <span class="n">Error</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">my_file</span> <span class="o">=</span> <span class="nn">File</span><span class="p">::</span><span class="nf">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+    <span class="k">let</span> <span class="k">mut</span> <span class="n">buffer</span> <span class="o">=</span> <span class="nn">String</span><span class="p">::</span><span class="nf">new</span><span class="p">();</span>
+
+    <span class="k">let</span> <span class="n">bytes_read</span> <span class="o">=</span> <span class="n">my_file</span><span class="nf">.read_to_string</span><span class="p">(</span><span class="o">&amp;</span><span class="k">mut</span> <span class="n">buffer</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+    <span class="nf">Ok</span><span class="p">(</span><span class="nd">format!</span><span class="p">(</span><span class="s">"read {} bytes, string is:</span><span class="se">\n</span><span class="s">{}"</span><span class="p">,</span> <span class="n">bytes_read</span><span class="p">,</span> <span class="n">buffer</span><span class="p">))</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Here, our function returns a <code class="language-html highlighter-rouge">Result</code>, which will contain either a <code class="language-html highlighter-rouge">String</code> value or an error of type <code class="language-html highlighter-rouge">Error</code>. We again use the <code class="language-html highlighter-rouge">?</code> operator on the <code class="language-html highlighter-rouge">read_to_string()</code> function, which unwraps the number of bytes read on a successful return; otherwise, it returns an <code class="language-html highlighter-rouge">Err</code> to the calling function. We print out the number of bytes read and the content of our data file on a successful read. A simple <code class="language-html highlighter-rouge">main()</code> that calls this function could look like this:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">fn</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">match</span> <span class="nf">get_data</span><span class="p">(</span><span class="s">"data.txt"</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nf">Ok</span><span class="p">(</span><span class="n">my_string</span><span class="p">)</span> <span class="k">=&gt;</span> <span class="nd">println!</span><span class="p">(</span><span class="s">"result: &lt;{}&gt;"</span><span class="p">,</span> <span class="n">my_string</span><span class="p">),</span>
+        <span class="nf">Err</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">=&gt;</span> <span class="nd">eprintln!</span><span class="p">(</span><span class="s">"error of: {}"</span><span class="p">,</span> <span class="n">e</span><span class="p">),</span>
+    <span class="p">};</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>When we run our program and have a valid data.txt file, we can see the following output:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>% cargo run
+    Finished dev [unoptimized + debuginfo] target(s) in 0.00s
+     Running `target/debug/rust_examples`
+result: <span class="nt">&lt;read</span> <span class="err">65</span> <span class="na">bytes</span><span class="err">,</span> <span class="na">string</span> <span class="na">is:</span>
+<span class="na">This</span> <span class="na">is</span> <span class="na">some</span> <span class="na">data</span> <span class="na">in</span> <span class="na">a</span> <span class="na">text</span> <span class="na">file.</span>
+<span class="na">Here</span> <span class="na">is</span> <span class="na">a</span> <span class="na">second</span> <span class="na">line</span> <span class="na">of</span> <span class="na">data.</span>
+<span class="nt">&gt;</span>
+</code></pre></div></div>
+
+<p>When the data file does not exist, here is what our output looks like:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>% cargo run
+    Finished dev [unoptimized + debuginfo] target(s) in 0.00s
+     Running `target/debug/rust_examples`
+error of: No such file or directory (os error 2)
+</code></pre></div></div>
+
+<p>We see that a complete error was propagated back to our main function, where we captured it in our match statement and could print it out to the console.</p>
+
+<p>Our simple examples demonstrate how Rust’s error handling enables cleaner code, where an application can elegantly handle the various conditions that calling an external function might produce. The <code class="language-html highlighter-rouge">?</code> operator with the <code class="language-html highlighter-rouge">Option</code> and <code class="language-html highlighter-rouge">Result</code> enumerations allows for a very clean means of testing for errors, handling them appropriately, and not relying on mixing valid values and error codes. An ability to attach meaningful data to error conditions makes for more robust APIs.</p>
+
+<h2 id="but-theres-more">But there’s more!</h2>
+
+<p>Rust’s standard libraries have a host of specific functions for managing error states and mapping library errors into user-defined values. External libraries like the <code class="language-html highlighter-rouge">thiserror</code> crate extend Rust’s standard error handling. The <code class="language-html highlighter-rouge">thiserror</code> crate provides an easy-to-use means of defining specific errors that look and feel exactly like the built-in error types that Rust defines: (example derived from <code class="language-html highlighter-rouge">thiserror</code> on <code class="language-html highlighter-rouge">docs.rs</code>)</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">use</span> <span class="nn">thiserror</span><span class="p">::</span><span class="n">Error</span><span class="p">;</span>
+
+<span class="nd">#[derive(Error,</span> <span class="nd">Debug)]</span>
+<span class="k">pub</span> <span class="k">enum</span> <span class="n">DataStoreError</span> <span class="p">{</span>
+    <span class="nd">#[error(</span><span class="s">"data store disconnected"</span><span class="nd">)]</span>
+    <span class="nf">Disconnect</span><span class="p">(</span><span class="nd">#[from]</span> <span class="nn">io</span><span class="p">::</span><span class="n">Error</span><span class="p">),</span>
+    <span class="nd">#[error(</span><span class="s">"the data for key `{0}` is not available"</span><span class="nd">)]</span>
+    <span class="nf">Redaction</span><span class="p">(</span><span class="nb">String</span><span class="p">),</span>
+    <span class="nd">#[error(</span><span class="s">"invalid header (expected {expected:?}, found {found:?})"</span><span class="nd">)]</span>
+    <span class="n">InvalidHeader</span> <span class="p">{</span>
+        <span class="n">expected</span><span class="p">:</span> <span class="nb">String</span><span class="p">,</span>
+        <span class="n">found</span><span class="p">:</span> <span class="nb">String</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="nd">#[error(</span><span class="s">"unknown data store error"</span><span class="nd">)]</span>
+    <span class="n">Unknown</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The <code class="language-html highlighter-rouge">anyhow</code> crate defines a flexible means of handling multiple error types and adding application-specific data to errors. Anyhow allows for <code class="language-html highlighter-rouge">Result<span class="nt">&lt;T</span><span class="err">,</span> <span class="na">anyhow::Error</span><span class="nt">&gt;</span></code>, or equivalently <code class="language-html highlighter-rouge">anyhow::Result<span class="nt">&lt;T&gt;</span></code>, as the function’s return type. A function can then return any error type that implements the <code class="language-html highlighter-rouge">std::error::Error</code> trait. (example derived from <code class="language-html highlighter-rouge">anyhow</code> on <code class="language-html highlighter-rouge">docs.rs</code>)</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">use</span> <span class="nn">anyhow</span><span class="p">::</span><span class="n">Result</span><span class="p">;</span>
+
+<span class="k">fn</span> <span class="nf">get_cluster_info</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="n">Result</span><span class="o">&lt;</span><span class="n">ClusterMap</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="c">// plain return of an error, here likely related to file system errors</span>
+    <span class="k">let</span> <span class="n">config</span> <span class="o">=</span> <span class="nn">std</span><span class="p">::</span><span class="nn">fs</span><span class="p">::</span><span class="nf">read_to_string</span><span class="p">(</span><span class="s">"cluster.json"</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+    
+    <span class="c">// return of an error with context</span>
+    <span class="k">let</span> <span class="n">map</span><span class="p">:</span> <span class="n">ClusterMap</span> <span class="o">=</span> <span class="nn">serde_json</span><span class="p">::</span><span class="nf">from_str</span><span class="p">(</span><span class="o">&amp;</span><span class="n">config</span><span class="p">)</span>
+        <span class="nf">.context</span><span class="p">(</span><span class="err">“</span><span class="n">json</span> <span class="n">deserialization</span> <span class="n">failed</span><span class="p">,</span> <span class="n">file</span> <span class="n">cluster</span><span class="py">.json</span> <span class="n">likely</span> <span class="n">not</span> <span class="n">formatted</span> <span class="n">correctly</span><span class="err">”</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+    
+    <span class="nf">Ok</span><span class="p">(</span><span class="n">map</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="in-summary">In summary</h2>
+
+<p>Our simple examples show how Rust’s error handling significantly differs from prior common programming languages. Rust provides a clean means of separating good vs. bad results from functions without introducing boilerplate that litters our source code. And we have the tools needed to define new error types that work cleanly within our library or application.</p>
+
+<p>Designing appropriate error handling is still hard – but Rust at least gives us the tools to do a good job of it! And this is more than aesthetics – better error handling allows errors to be more visible in an application and decreases application defects due to not handling error conditions correctly. It also contributes to cleaner and simpler designs – by definition, better designs – which make applications more robust and easier to develop correctly. This is a solid contributor to the Rust programming language’s high interest and “love” from developers!</p>
+
+    <div>Want to encourage more content like this? Please consider <a
+            href="https://www.buymeacoffee.com/mikehentges">buying me a cup of coffee!</a>
+        <p></p>
+    </div>
+</section> <!-- This is our footer. -->
+<footer>
+  <div class="footer-bottom">
+    <div class="author">Michael Hentges Blog © 2022</div>
+    <div class="author">
+      <a rel="me" href="https://hachyderm.io/@mhentges">Mastodon</a>
+    </div>
+    <div class="tool">
+      Powered by <a href="https://jekyllrb.com/">Jekyl</a> and
+      <a href="https://pages.github.com/">GitHub Pages</a>
+    </div>
+  </div>
+</footer>
+
+  </body>
+</html>

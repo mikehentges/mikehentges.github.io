@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+  <link type="application/atom+xml" rel="alternate" href="https://mikehentges.github.io/feed.xml" title="Michael Hentges Blog" />
+  <head>
+    <!-- Styles-->
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="monetization" content="$ilp.uphold.com/3kikPPEakjxe" />
+    <title>Michael Hentges Blog</title>
+  </head>
+
+  <body>
+    <!-- This is our header. -->
+
+<header>
+    <link rel="icon" type="image/x-icon" href="/logo-color.ico">
+
+    <div class="header_title">Michael Hentges Blog</div>
+    <div class="header_menu">
+        <ul>
+            <li><a href="/">Home</a></li>
+            
+            
+                <li><a href="/ai">AI</a></li>
+            
+                <li><a href="/programming">Programming</a></li>
+            
+                <li><a href="/chess">Chess</a></li>
+            
+                <li><a href="/woodworking">Woodworking</a></li>
+            
+            <li><a href="/about">About</a></li>
+        </ul>
+    </div>
+    
+</header> <section class="post-section">
+    <link type="application/atom+xml" rel="alternate" href="https://mikehentges.github.io/feed.xml" title="Michael Hentges Blog" />
+
+    
+    <img class="hero" src="https://res.cloudinary.com/dbzsk4ytb/image/upload/c_scale,w_720/v1668802185/blog-images/Rust-Lambda/Rust_In_Action_rhku1c.png">
+    
+    
+    
+    <h2>Rust, Lambda, and DynamoDB</h2>
+    
+    <p>Nov 18, 2022</p>
+
+    <p>As part of my journey to learn more about Rust development, I developed a Lambda service hosted on AWS that writes to a DynamoDB database and an associated Rust HTTP client. Along with Rust, I used Terraform to manage the deployment of the AWS resources. This article is the 4th I’ve written on my Wireless Thermostat application that runs on a Raspberry Pi. You can find the others here: <a href="https://medium.com/@mikehentges65/raspberry-pi-wireless-thermostat-in-rust-45a5d35196cf">Raspberry Pi Wireless Thermostat - in Rust</a>, <a href="https://medium.com/@mikehentges65/rust-cross-compiling-made-easy-e30fcb233fef">Rust Cross Compiling Made Easy</a>, and <a href="https://betterprogramming.pub/easy-multi-threaded-shared-memory-in-rust-57344e9e8b97">Implementing Multi-Threaded Shared Memory in Rust</a>. We are going to cover the following in this article:</p>
+
+<ol>
+  <li>Define a JSON API as a separate crate shared across two related projects.</li>
+  <li>Write an AWS Lambda function in Rust, using the AWS Rust SDK, that accepts an HTTP POST with a JSON payload of data, and writes the data to a DynamoDB database.</li>
+  <li>Use Terraform to define and build the database, the lambda function, and the permissions glue required to have all the pieces fit together.</li>
+  <li>Use the AWS CLI to deploy Lambda application executable updates.</li>
+  <li>Write a Rust HTTP Client that sends the data to our Lambda function.</li>
+</ol>
+
+<p>I assume you have the <a href="https://aws.amazon.com/cli/">AWS CLI</a>, <a href="https://www.terraform.io/">Terraform</a>, and <a href="https://www.rust-lang.org/">Rust</a> installed on your system, and your AWS account is set up and connected to the CLI. It’s a bit of work, but easy to follow under each system’s documentation.</p>
+
+<p>The use case for my application is to keep track of my Raspberry Pi thermostat application’s status and record history. A Rust application running on a Raspberry Pi will push information to a cloud database. With activity data in a cloud database, monitoring the application’s health can be done by examining the data – and avoiding having to open firewalls to let in outside observers. I also get a data source for history, which I can graph on a UI later.</p>
+
+<p>I picked <a href="https://aws.amazon.com/dynamodb/">DynamoDB on AWS</a> as the database platform. My data needs fit easily inside DynamoDB’s free tier, and DynamoDB is an effective place to push IoT time series data. Instead of directly connecting the Pi application to the Dynamo database, I chose an HTTP-based service layer for the interface between the Raspberry PI and AWS. I’ve found HTTP services to be more resilient than direct DB connections – HTTP’s stateless nature makes it self-correcting across network outages. Pushing data through to a DB is an excellent job for a Lambda function – and with AWS recently publishing a Rust SDK, I took the opportunity to build out the Lambda function as a Rust application. Here’s a picture of how the pieces fit together that we are going to examine:</p>
+
+<p><img class="center" src="https://res.cloudinary.com/dbzsk4ytb/image/upload/v1668802179/blog-images/Rust-Lambda/AWS-Lambda-Rust.drawio2_nedddz.png" alt="lambda architecture" /></p>
+
+<p>There are three main parts to the application. First, the main application is thermostat_pi, the client that creates the data we move to the database. Under this project is the Lambda function project, named push_temp. Lastly, the temp_data project holds a definition of a data transport API. All three projects are on GitHub under the thermostat_pi application.</p>
+
+<p>In temp_data, I started with a Rust struct that holds the data pieces for the thermostat application and enabled serde for JSON representation:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="syntax"><code><span class="k">use</span> <span class="nn">serde</span><span class="p">::</span><span class="n">Deserialize</span><span class="p">;</span>
+<span class="k">use</span> <span class="nn">serde</span><span class="p">::</span><span class="n">Serialize</span><span class="p">;</span>
+
+<span class="nd">#[derive(Debug,</span> <span class="nd">Serialize,</span> <span class="nd">Deserialize)]</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="n">TempData</span> <span class="p">{</span>
+    <span class="k">pub</span> <span class="n">record_date</span><span class="p">:</span> <span class="nb">String</span><span class="p">,</span>
+    <span class="k">pub</span> <span class="n">thermostat_on</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="k">pub</span> <span class="n">temperature</span><span class="p">:</span> <span class="nb">f32</span><span class="p">,</span>
+    <span class="k">pub</span> <span class="n">thermostat_value</span><span class="p">:</span> <span class="nb">u16</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>I created this in a separate Rust crate so that it could be shared with both the Pi application and lambda function projects – ensuring both always were in sync. The Cargo.toml looks like this:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>[package]
+name = "temp-data"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+serde = {version = "1", features = ["derive"]}
+</code></pre></div></div>
+
+<p>I then defined a corresponding DynamoDB database to hold this information. I decided on a Partition Key of “day” for the time-series data, which allows for retrieving a day’s worth of data without scanning the entire table. I also created a sort key for the date/time. This key structure will allow efficient read access to the data when I want to set up an alarm or graph historical data. I don’t have much experience with DynamoDB, so there could be a more efficient way to solve this problem – but what I have works for me. Here’s what the DynamoDB table will look like when we are finished:</p>
+
+<p><img class="center" src="https://res.cloudinary.com/dbzsk4ytb/image/upload/v1668802197/blog-images/Rust-Lambda/DynamoDB_data_zforiq.png" alt="DynamoDB table" /></p>
+
+<p>The Record_Day and Record_Date keys are strings to DynamoDB. The Record_Date format is RFC3339, which the Rust standard time package supports. It creates a string that can sort the time values correctly by alphabetical sorting. 
+Next, we build the lambda function to take our incoming request and store it in the DynamoDB table. The push-temp directory of my main project (GitHub link) is where this lives. The Cargo.toml contains these entries:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>[package]
+name = "push_temp"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+aws-config = "0.51.0"
+aws-sdk-dynamodb = "0.21.0"
+log = "0.4.14"
+serde = {version = "1", features = ["derive"]}
+tokio = "1.16.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+lambda_http = "0.7"
+serde_json = "1.0.78"
+
+# Our package that defines the struct of the incoming request
+temp-data = { path="../temp-data" }
+</code></pre></div></div>
+
+<p>We are using the <a href="https://docs.aws.amazon.com/sdk-for-rust/">AWS SDK for Rust</a>. I put all the Rust code in the main.rs file for our lambda function. First, there is some boilerplate to import our message struct, define our response types, and get the Lambda environment set up:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>use aws_sdk_dynamodb::model::AttributeValue;
+use aws_sdk_dynamodb::Client;
+use lambda_http::{lambda_runtime::Error, service_fn, IntoResponse, Request};
+
+extern crate temp_data;
+use temp_data::TempData;
+
+use log::{debug, error};
+use serde::Serialize;
+
+#[derive(Debug, Serialize)]
+struct SuccessResponse {
+    pub body: String,
+}
+
+#[derive(Debug, Serialize)]
+struct FailureResponse {
+    pub body: String,
+}
+
+// Implement Display for the Failure response so that we can then implement Error.
+impl std::fmt::Display for FailureResponse {
+    fn fmt(<span class="err">&amp;</span>self, f: <span class="err">&amp;</span>mut std::fmt::Formatter<span class="nt">&lt;</span><span class="err">'</span><span class="na">_</span><span class="nt">&gt;</span>) -&gt; std::fmt::Result {
+        write!(f, "{}", self.body)
+    }
+}
+
+impl std::error::Error for FailureResponse {}
+</code></pre></div></div>
+
+<p>The main() function registers an event handler for the incoming event; our handler function is named “my_handler”:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>#[tokio::main]
+async fn main() -&gt; Result<span class="nt">&lt;</span><span class="err">(),</span> <span class="na">Error</span><span class="nt">&gt;</span> {
+    tracing_subscriber::fmt::init();
+    debug!("logger has been set up");
+
+    lambda_http::run(service_fn(my_handler)).await?;
+
+    Ok(())
+}
+</code></pre></div></div>
+
+<p>Our my_handler() function will run when an incoming request arrives. Our my_handler() function needs to do a couple of things. First, it grabs the incoming JSON from the request and parses it into our struct, request_struct. Notice that if the JSON parsing fails, an error value returns at this point.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>async fn my_handler(request: Request) -&gt; Result<span class="nt">&lt;impl</span> <span class="na">IntoResponse</span><span class="err">,</span> <span class="na">Error</span><span class="nt">&gt;</span> {
+    debug!("handling a request, Request is: {:?}", request);
+
+    let request_json = match request.body() {
+        lambda_http::Body::Text(json_string) =&gt; json_string,
+        _ =&gt; "",
+    };
+    debug!("Request JSON is : {:?}", request_json);
+    let request_struct: TempData = serde_json::from_str(request_json)?;
+</code></pre></div></div>
+
+<p>Next, we need to push this struct into our DynamoDB table. I’m choosing to separate each data element into its own DynamoDB attribute instead of storing the JSON directly. We do some minor data formatting to pull out the day as a separate attribute to use as our Partition Key. The rest of the struct values convert into AttributeValues for the Dynamo DB API. Our error handling hides DynamoDB-specific error messages from the end user as an implementation detail.</p>
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>    // set up as a DynamoDB client
+    let config = aws_config::load_from_env().await;
+    let client = Client::new(<span class="ni">&amp;config);</span>
+
+    // build the values that are stored in the DB
+    let record_date_av = AttributeValue::S(request_struct.record_date.clone());
+    let thermostat_on_av = AttributeValue::S(request_struct.thermostat_on.to_string());
+    let temperature_av = AttributeValue::N(request_struct.temperature.to_string());
+    let thermostat_value_av = AttributeValue::N(request_struct.thermostat_value.to_string());
+    let record_day_av: AttributeValue = AttributeValue::S(request_struct.record_date[..10].to_string());
+
+    // Store our data in the DB
+    let _resp = client
+        .put_item()
+        .table_name("Shop_Thermostat")
+        .item("Record_Day", record_day_av)
+        .item("Record_Date", record_date_av)
+        .item("Thermostat_On", thermostat_on_av)
+        .item("Temperature", temperature_av)
+        .item("Thermostat_Value", thermostat_value_av)
+        .send()
+        .await
+        .map_err(|err| {
+            error!("failed to put item in Shop_Thermostat, error: {}", err);
+            FailureResponse {
+                body: "The lambda encountered an error and your message was not saved".to_owned(),
+            }
+        })?;
+
+    debug! {
+        "Successfully stored item {:?}", <span class="err">&amp;</span>request_struct
+    }
+
+    Ok("the lambda was successful".to_string())
+}
+</code></pre></div></div>
+
+<p>To deploy our custom Lambda function to AWS, we need to create an executable called “bootstrap.” We need Rust to build our executable by cross-compiling to the x86_64-unknown-linux-musl target – which is what the Lambda run time requires. I like using <a href="https://github.com/casey/just">just</a> as a command runner and created a simple <code class="language-html highlighter-rouge">justfile</code> for the build, which runs the two commands we need to produce the executable called “bootstrap” in our local directory. I use the <a href="https://github.com/cross-rs/cross">cross tool</a> (cargo install cross), which pulls down a Docker container for the cross-compile environment. The <a href="https://docs.aws.amazon.com/sdk-for-rust/latest/dg/lambda.html">AWS SDK</a> documents alternatives to cross if you don’t want to use a local docker container. Finally, we copy the produced executable to the magic file name of “bootstrap” and store it in our project root.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>build: 
+    cross build --release --target x86_64-unknown-linux-musl
+    cp target/x86_64-unknown-linux-musl/release/push_temp bootstrap
+</code></pre></div></div>
+
+<p>We could manually deploy our Lambda function by zipping up the bootstrap file and uploading it through the AWS web interface. But other AWS pieces need to go around the Lambda function for everything to work. We need to set up permissions for the Lambda function to insert data into our DynamoDB tables and permissions for executing the Lambda function itself.</p>
+
+<p>Recently, AWS has published a means to create a <a href="https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html">Lambda Function URL</a> – an HTTPS endpoint directly connected to a Lambda function. For simple use cases like ours, a Lambda Function URL allows for a simpler setup and avoids having to create an API gateway endpoint. If an API gateway endpoint is important to you, I’d suggest reading <a href="https://medium.com/aws-tip/crud-operations-with-rust-on-aws-lambda-part-2-bd1feae2554b">this article</a> which includes the additional steps needed. My approach is a simplified version of the one described.</p>
+
+<p>We could use the AWS console to create our Lambda Function, Function URL, and DynamoDB– but it’s not very repeatable. Instead, let’s use Terraform to define the pieces we need to have a repeatable process. It also gives us a clean way to delete everything when we want to do that. I split up the Terraform configuration into a set of files for each piece of our deployment, all located in the root of the push_temp crate. First, a variables.tf file will define a couple of shared values we’ll need:</p>
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code># Input variable definitions, adjust for your needs
+
+variable "aws_region" {
+  description = "AWS region for all resources."
+
+  type    = string
+  default = "us-east-2"
+}
+
+variable "push_temp_bin_path" {
+  description = "The binary path for the lambda."
+
+  type    = string
+  default = "./bootstrap"
+}
+</code></pre></div></div>
+
+<p>Then, a main.tf file sets up our environment:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 4.0"
+    }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~&gt; 2.2.0"
+    }
+  }
+
+  required_version = "~&gt; 1.0"
+
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+data "aws_caller_identity" "current" {}
+</code></pre></div></div>
+
+<p>Now we can set up each of the resources we need to deploy. First, we create the DynamoDB table. Note that we define the two columns we use as keys, and the rest get dynamically created as we insert data. Our keys are strings, so we use the type = “S” to define them. We initialize the table at the lowest possible resource usage, as we have a single little Raspberry Pi sending us data.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code># aws_dynamodb_table.shop-thermostat-table:
+resource "aws_dynamodb_table" "shop-thermostat-table" {
+  hash_key       = "Record_Day"
+  name           = "Shop_Thermostat"
+  range_key      = "Record_Date"
+  billing_mode   = "PAY_PER_REQUEST"
+  read_capacity  = 0
+  write_capacity = 0
+
+  attribute {
+    name = "Record_Day"
+    type = "S"
+  }
+  attribute {
+    name = "Record_Date"
+    type = "S"
+  }
+}
+</code></pre></div></div>
+
+<p>Next, we can define our lambda function. We need to provide the .zip file of our executable to Terraform for the initial deployment to set up the Lambda function. I don’t want to use Terraform to deploy our executable on every application change – Terraform is not a CI/CD tool. But we need something to create the function. So after the resources are all created successfully, we will use a different method to deploy application updates.</p>
+
+<p>We also set up a Lambda Function URL as the publicly reachable endpoint.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code># PUSH TEMP
+# Here we grab the compiled executable and use the archive_file package
+# to convert it into the .zip file we need.
+data "archive_file" "push_temp_lambda_archive" {
+  type = "zip"
+
+  source_file = var.push_temp_bin_path
+  output_path = "bootstrap.zip"
+}
+
+# Here we set up an IAM role for our Lambda function
+resource "aws_iam_role" "push_temp_lambda_execution_role" {
+  assume_role_policy = <span class="nt">&lt;</span><span class="err">&lt;</span><span class="na">EOF</span>
+<span class="err">{</span>
+  <span class="err">"</span><span class="na">Version</span><span class="err">"</span><span class="na">:</span> <span class="err">"2012</span><span class="na">-10-17</span><span class="err">",</span>
+  <span class="err">"</span><span class="na">Statement</span><span class="err">"</span><span class="na">:</span> <span class="err">[</span>
+    <span class="err">{</span>
+      <span class="err">"</span><span class="na">Action</span><span class="err">"</span><span class="na">:</span> <span class="err">"</span><span class="na">sts:AssumeRole</span><span class="err">",</span>
+      <span class="err">"</span><span class="na">Principal</span><span class="err">"</span><span class="na">:</span> <span class="err">{</span>
+        <span class="err">"</span><span class="na">Service</span><span class="err">"</span><span class="na">:</span> <span class="err">"</span><span class="na">lambda.amazonaws.com</span><span class="err">"</span>
+      <span class="err">},</span>
+      <span class="err">"</span><span class="na">Effect</span><span class="err">"</span><span class="na">:</span> <span class="err">"</span><span class="na">Allow</span><span class="err">",</span>
+      <span class="err">"</span><span class="na">Sid</span><span class="err">"</span><span class="na">:</span> <span class="err">""</span>
+    <span class="err">}</span>
+  <span class="err">]</span>
+<span class="err">}</span>
+<span class="na">EOF</span>
+
+<span class="err">}</span>
+
+<span class="na">#</span> <span class="na">Here</span> <span class="na">we</span> <span class="na">attach</span> <span class="na">a</span> <span class="na">permission</span> <span class="na">to</span> <span class="na">execute</span> <span class="na">a</span> <span class="na">lambda</span> <span class="na">function</span> <span class="na">to</span> <span class="na">our</span> <span class="na">role</span>
+<span class="na">resource</span> <span class="err">"</span><span class="na">aws_iam_role_policy_attachment</span><span class="err">"</span> <span class="err">"</span><span class="na">push_temp_lambda_execution_policy</span><span class="err">"</span> <span class="err">{</span>
+  <span class="na">role       = </span><span class="s">aws_iam_role.push_temp_lambda_execution_role.name</span>
+  <span class="na">policy_arn = </span><span class="s">"arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"</span>
+<span class="err">}</span>
+
+<span class="na">#</span> <span class="na">Here</span> <span class="na">is</span> <span class="na">the</span> <span class="na">definition</span> <span class="na">of</span> <span class="na">our</span> <span class="na">lambda</span> <span class="na">function</span> 
+<span class="na">resource</span> <span class="err">"</span><span class="na">aws_lambda_function</span><span class="err">"</span> <span class="err">"</span><span class="na">push_temp_lambda</span><span class="err">"</span> <span class="err">{</span>
+  <span class="na">function_name = </span><span class="s">"PushTemp"</span>
+
+  <span class="na">source_code_hash = </span><span class="s">data.archive_file.push_temp_lambda_archive.output_base64sha256</span>
+  <span class="na">filename         = </span><span class="s">data.archive_file.push_temp_lambda_archive.output_path</span>
+
+  <span class="na">handler = </span><span class="s">"func"</span>
+  <span class="na">runtime = </span><span class="s">"provided"</span>
+
+  <span class="na">#</span> <span class="na">here</span> <span class="na">we</span> <span class="na">enable</span> <span class="na">debug</span> <span class="na">logging</span> <span class="na">for</span> <span class="na">our</span> <span class="na">Rust</span> <span class="na">run-time</span> <span class="na">environment.</span> <span class="na">We</span> <span class="na">would</span> <span class="na">change</span>
+  <span class="na">#</span> <span class="na">this</span> <span class="na">to</span> <span class="na">something</span> <span class="na">less</span> <span class="na">verbose</span> <span class="na">for</span> <span class="na">production.</span>
+  <span class="na">environment</span> <span class="err">{</span>
+    <span class="na">variables = </span><span class="s">{</span>
+      <span class="err">"</span><span class="na">RUST_LOG</span><span class="err">"</span> <span class="err">=</span> <span class="err">"</span><span class="na">debug</span><span class="err">"</span>
+    <span class="err">}</span>
+  <span class="err">}</span>
+
+  <span class="na">#This</span> <span class="na">attaches</span> <span class="na">the</span> <span class="na">role</span> <span class="na">defined</span> <span class="na">above</span> <span class="na">to</span> <span class="na">this</span> <span class="na">lambda</span> <span class="na">function</span>
+  <span class="na">role = </span><span class="s">aws_iam_role.push_temp_lambda_execution_role.arn</span>
+<span class="err">}</span>
+
+<span class="err">//</span> <span class="na">Add</span> <span class="na">lambda</span> <span class="na">-</span><span class="nt">&gt;</span> DynamoDB policies to the lambda execution role
+resource "aws_iam_role_policy" "write_db_policy" {
+  name = "lambda_write_db_policy"
+  role = aws_iam_role.push_temp_lambda_execution_role.name
+
+  policy = <span class="nt">&lt;</span><span class="err">&lt;</span><span class="na">EOF</span>
+<span class="err">{</span>
+  <span class="err">"</span><span class="na">Version</span><span class="err">"</span><span class="na">:</span> <span class="err">"2012</span><span class="na">-10-17</span><span class="err">",</span>
+  <span class="err">"</span><span class="na">Statement</span><span class="err">"</span><span class="na">:</span> <span class="err">[</span>
+    <span class="err">{</span>
+      <span class="err">"</span><span class="na">Sid</span><span class="err">"</span><span class="na">:</span> <span class="err">"",</span>
+      <span class="err">"</span><span class="na">Action</span><span class="err">"</span><span class="na">:</span> <span class="err">[</span>
+        <span class="err">"</span><span class="na">dynamodb:PutItem</span><span class="err">"</span>
+      <span class="err">],</span>
+      <span class="err">"</span><span class="na">Effect</span><span class="err">"</span><span class="na">:</span> <span class="err">"</span><span class="na">Allow</span><span class="err">",</span>
+      <span class="err">"</span><span class="na">Resource</span><span class="err">"</span><span class="na">:</span> <span class="err">"</span><span class="na">arn:aws:dynamodb:</span> <span class="na">:</span><span class="err">${</span><span class="na">var.aws_region</span><span class="err">}</span><span class="na">::</span><span class="err">${</span><span class="na">data.aws_caller_identity.current.account_id</span><span class="err">}</span><span class="na">:table</span><span class="err">/</span><span class="na">Shop_Thermostat</span><span class="err">"</span>
+    <span class="err">}</span>
+  <span class="err">]</span>
+<span class="err">}</span>
+<span class="na">EOF</span>
+<span class="err">}</span>
+
+<span class="err">//</span> <span class="na">The</span> <span class="na">Lambda</span> <span class="na">Function</span> <span class="na">URL</span> <span class="na">that</span> <span class="na">allows</span> <span class="na">direct</span> <span class="na">access</span> <span class="na">to</span> <span class="na">our</span> <span class="na">function</span>
+<span class="na">resource</span> <span class="err">"</span><span class="na">aws_lambda_function_url</span><span class="err">"</span> <span class="err">"</span><span class="na">push_temp_function</span><span class="err">"</span> <span class="err">{</span>
+  <span class="na">function_name      = </span><span class="s">aws_lambda_function.push_temp_lambda.function_name</span>
+  <span class="na">authorization_type = </span><span class="s">"NONE"</span>
+<span class="err">}</span>
+</code></pre></div></div>
+
+<p>Lastly, we create an output file so we can get the API endpoint for calling our function:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code># Output value definitions
+
+output "invoke_url" {
+  value = aws_lambda_function_url.push_temp_function.function_url
+}
+</code></pre></div></div>
+
+<p>Whew, that’s all done! A <code class="language-html highlighter-rouge">terraform init <span class="err">&amp;</span> terraform apply</code> will create all the stuff, upload our newly compiled function, and make it ready for testing! 
+We can call the external endpoint through curl, replacing &lt; endpoint &gt; below with the value that terraform outputs on the apply.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>curl -X POST https://<span class="nt">&lt;endpoint&gt;</span>.lambda-url.us-east-2.on.aws/ \
+-H 'Content-Type: application/json' \
+-d '{"record_date":"2022-02-03T13:22:22","thermostat_on":true,"temperature":"65","thermostat_value":"64"}'
+</code></pre></div></div>
+
+<p>You can use the DynamoDB console to see your new record in the database:</p>
+
+<p><img class="center" src="https://res.cloudinary.com/dbzsk4ytb/image/upload/v1668802192/blog-images/Rust-Lambda/Dynamo_DB_test_result_qb15dm.png" alt="DynamoDB table result" /></p>
+
+<p>To make application updates to the code after the initial deployment, I created a deploy target in my justfile for the commands needed to deploy an updated application. These commands rely on the AWS CLI to be installed and configured for the same region as the Lambda function.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>deploy: build
+    cp target/x86_64-unknown-linux-musl/release/push_temp bootstrap
+    zip bootstrap.zip bootstrap
+    aws lambda update-function-code --function-name PushTemp --zip-file fileb://./bootstrap.zip 
+</code></pre></div></div>
+
+<p>Now that we have a working back-end that can accept an HTTP Post with our JSON data and persist it in DynamoDB, we can create a Rust front-end that sends that request. Our Cargo.toml in the main application again has a reference to our shared TempData crate so that we can use the shared struct.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>[dependencies]
+temp-data = { path="temp-data" }
+</code></pre></div></div>
+
+<p>I created a function store_temp_data() to use whenever new data is available within the Rust application. I pass in the data and the endpoint URL, which is in the run-time configuration elsewhere. I’m using the reqwest crate for the base HTTP client. Our function starts by initializing the client and building the request structure TempData we saw earlier. We also grab the current time and convert it to the RFC3339 format.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>use reqwest;
+use reqwest::Error;
+use time::format_description::well_known::Rfc3339;
+use time::macros::offset;
+use time::OffsetDateTime;
+
+extern crate temp_data;
+use temp_data::TempData;
+
+pub async fn store_temp_data(
+    thermostat_on: bool, 
+    current_temp: f32,
+    thermostat_value: i16,
+    aws_url: <span class="err">&amp;</span>str,
+) -&gt; Result<span class="nt">&lt;</span><span class="err">(),</span> <span class="na">Error</span><span class="nt">&gt;</span> {
+
+    let client = reqwest::Client::new();
+
+    // Get the current time, offset to my timezone
+    let now = OffsetDateTime::now_utc().to_offset(offset!(-6));
+    let now = now.format(<span class="ni">&amp;Rfc3339).unwrap();</span>
+
+    let body = TempData {
+        record_date: now,
+        thermostat_on: thermostat_on,
+        temperature: current_temp
+        thermostat_value: thermostat_value
+    };
+</code></pre></div></div>
+
+<p>Next, we send the request to our endpoint, serializing it into JSON along the way, and handle the response. I’m choosing to log the error and return OK on an error, as this is a non-critical function for our application.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>    let response = client
+        .post(aws_url)
+        .json(<span class="err">&amp;</span>body)
+        .send()
+        .await;
+
+    match response {
+        Ok(r) =&gt; {
+            tracing::debug!("response: {:?}", r);
+        }
+        Err(e) =&gt; {
+            tracing::error!("Error sending to AWS, {}", e);
+        }
+    }
+
+    Ok(())
+}
+</code></pre></div></div>
+
+<p>And that’s it! For the five things we set out to accomplish, here are our key takeaways:</p>
+
+<ol>
+  <li>We are defining the TempData struct in a separate crate (directory) with its own Cargo.toml giving us a common referenceable structure for the API between our client and server applications. Utilizing the struct to define a JSON-based interface between the client and server, and using serde to serialize and deserialize our TempData structure on either end, is simple to set up and keep in sync across our projects.</li>
+  <li>The AWS Rust SDK provides easy-to-use interfaces for Rust for Lambda definition and DynamoDB access. Rust makes for a great Labmda execution environment, with its speed and low memory footprint.</li>
+  <li>Terraform works great to build out all of the AWS components we need and set up the permissions pieces required to glue everything together.</li>
+  <li>Using the AWS CLI is an easy way to update our Lambda executable on demand.</li>
+  <li>The reqwest crate gives us a straightforward means to send HTTP requests for our client application.</li>
+</ol>
+
+<p>I hope you find this useful on your Rust journey! If you have any improvement ideas, please provide feedback in the comments.</p>
+
+
+    <div>Want to encourage more content like this? Please consider <a
+            href="https://www.buymeacoffee.com/mikehentges">buying me a cup of coffee!</a>
+        <p></p>
+    </div>
+</section> <!-- This is our footer. -->
+<footer>
+  <div class="footer-bottom">
+    <div class="author">Michael Hentges Blog © 2022</div>
+    <div class="author">
+      <a rel="me" href="https://hachyderm.io/@mhentges">Mastodon</a>
+    </div>
+    <div class="tool">
+      Powered by <a href="https://jekyllrb.com/">Jekyl</a> and
+      <a href="https://pages.github.com/">GitHub Pages</a>
+    </div>
+  </div>
+</footer>
+
+  </body>
+</html>

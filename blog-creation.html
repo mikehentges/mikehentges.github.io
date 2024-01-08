@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+  <link type="application/atom+xml" rel="alternate" href="https://mikehentges.github.io/feed.xml" title="Michael Hentges Blog" />
+  <head>
+    <!-- Styles-->
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="monetization" content="$ilp.uphold.com/3kikPPEakjxe" />
+    <title>Michael Hentges Blog</title>
+  </head>
+
+  <body>
+    <!-- This is our header. -->
+
+<header>
+    <link rel="icon" type="image/x-icon" href="/logo-color.ico">
+
+    <div class="header_title">Michael Hentges Blog</div>
+    <div class="header_menu">
+        <ul>
+            <li><a href="/">Home</a></li>
+            
+            
+                <li><a href="/ai">AI</a></li>
+            
+                <li><a href="/programming">Programming</a></li>
+            
+                <li><a href="/chess">Chess</a></li>
+            
+                <li><a href="/woodworking">Woodworking</a></li>
+            
+            <li><a href="/about">About</a></li>
+        </ul>
+    </div>
+    
+</header> <section class="post-section">
+    <link type="application/atom+xml" rel="alternate" href="https://mikehentges.github.io/feed.xml" title="Michael Hentges Blog" />
+
+    
+    <img class="hero" src="https://res.cloudinary.com/dbzsk4ytb/image/upload/v1661027101/blog-images/JourneyPath_maza5m.jpg">
+    
+    
+    
+    <h2>Creating a new blog with Jekyll and GitHub Pages</h2>
+    
+    <p>Aug 20, 2022</p>
+
+    <p>Even though I’ve been in software development for almost my whole career, I’ve never had the chance to build a website
+from scratch. I’ve created a WordPress site before - but that hardly counts as programming!</p>
+
+<h3 id="getting-started-on-my-journey">Getting Started on My Journey</h3>
+
+<p>So when it came time to create a personal blog, I dove in head-first and learned a bunch of new things. Initially, I ran
+across <a href="https://jamstack.org/">Jamstack</a> as a new way of building static sites. Jamstack seemed like a much better
+technology stack for what I wanted to create than WordPress.</p>
+
+<p>At first, I shied away from <a href="https://en.wikipedia.org/wiki/Markdown">markdown</a> for content creation. While I had
+used <a href="https://slack.com/">Slack</a> for instant messaging, which utilizes markdown, I wasn’t sure I would have enough
+formatting control for a blog site. This reluctance led me to the idea of a headless CRM for content creation and a site
+generator to pull from the CRM to create the pages.</p>
+
+<h3 id="the-first-attempt">The first attempt</h3>
+
+<p>My initial technology stack utilized <a href="https://ghost.org/">Ghost</a> for CRM and <a href="https://www.gatsbyjs.com/">Gatsby</a> as the
+site generator. Ghost’s page editor is great - easy to use and powerful. But, the connection between Ghost and Gatsby
+was a little clunky. I also struggled with the formatting and structure I wanted. I didn’t have a solid background in
+HTML and CSS, which made the jump to learning <a href="https://reactjs.org/">React</a> difficult.</p>
+
+<p>After spinning my wheels for a while, I eventually just pulled out Gatsby and went with a pure Ghost site. Controlling
+the layout was more manageable, and I could make a structure I was happy with - pushing the site through Gatsby didn’t
+add much value.</p>
+
+<p>But now I needed a server up 24x7. I spun up a Ghost instance on <a href="https://aws.amazon.com/lightsail/">AWS/Lightsail</a>,
+moved my domain to <a href="https://aws.amazon.com/route53/">AWS/Route 53</a>, and connected the pieces. Everything worked great,
+but I had monthly bills and a more complex stack than necessary for a simple site like this blog.</p>
+
+<h3 id="the-second-try---progress">The second try - progress!</h3>
+
+<p>After some more research, I ran across <a href="https://pages.github.com">GitHub Pages</a>. It offers free hosting within extremely
+generous usage patterns. GitHub Pages uses <a href="https://jekyllrb.com">Jekyll</a> as a site generator - getting me back to a
+more Jamstack approach to building the site. As a developer, I already have a <a href="https://github.com">GitHub</a> account and
+am familiar with <a href="https://git-scm.com">git</a>, so pushing updates to GitHub to update the website was reasonable.</p>
+
+<p>But I wanted a layout that wasn’t immediately available as a Jekyll theme. So, it was time to fix my lack of depth in
+HTML and CSS and design a site! Using the layout of my prior Ghost site as a template, I eventually figured out the
+right combination of HTML, CSS, Jekyll templates, and a little Javascript to put the site together. You can find all the
+pieces I put together in my site’s repository
+at: <a href="https://github.com/mikehentges/mikehentges.github.io">https://github.com/mikehentges/mikehentges.github.io</a>.</p>
+
+<p>In the end, markdown is more than adequate as a content creation tool. Once I figured out how the Jekyll templates
+worked, I could easily use CSS to format blog entries and pages the way I wanted. I can run the whole site locally under
+Jekyll, so iterative development is easy. And the automatic push to Github to publish the site works great.</p>
+
+<h3 id="some-jekyll-tipstricks">Some Jekyll tips/tricks</h3>
+
+<p>I did have to solve a few problems before I had everything working. I wanted a dynamic navigation menu that showed
+categories of posts on the site. I didn’t want to have to re-code the Html for the menu when categories changed and
+instead drove it dynamically out of a data file. Jekyll has a great set of available plug-ins for doing different
+things (<a href="https://github.com/planetjekyll/awesome-jekyll-plugins">Awesome Jekyll Plugins</a>). I found
+the <a href="https://github.com/ashmaroli/jekyll-data">Jekyll Data</a> plug-in for reading data files and using them dynamically
+in templates. I created a straightforward <code class="language-html highlighter-rouge">categories.yml</code> file and used it for the main navigation menu.</p>
+
+<p>Everything worked great locally, but I ran into problems when I pushed it to GitHub. GitHub Pages runs in a safe mode
+and has a set of allowed plug-ins – it does not natively support the Jekyll Data plug-in. So when I pushed my site to
+GitHub, it wouldn’t generate the static site correctly. Fortunately, a custom GitHub
+action, <a href="https://github.com/jeffreytse/jekyll-deploy-action">Jekyll Deploy Action</a>, solves this problem. The Jekyll
+Deploy Action allows you to set up a custom GitHub Actions build environment with Jekyll and any plug-ins you’d like to
+add. I added the right <code class="language-html highlighter-rouge">./.github/workflows/build-jekyll.yml</code> file to trigger the GitHub Actions on an update to the
+main branch. So now the sequence is:</p>
+
+<ol>
+  <li>I commit my new/changed markup files. <code class="language-html highlighter-rouge">git commit -m 'some new changes…'</code></li>
+  <li>I push the changes to GitHub. <code class="language-html highlighter-rouge">git push</code></li>
+  <li>A GitHub Action triggers, creating a Jekyll run-time environment with the plug-ins I want/need all installed.</li>
+  <li>A set of generated static files (.html, .css, .js) and any file artifacts are put in the repository’s gh-pages branch
+by the GitHub Action.</li>
+  <li>GitHub pages deploy the generated files, and the updated site is active!</li>
+</ol>
+
+<p>Jekyll uses the liquid template language <a href="https://shopify.github.io/liquid/">https://shopify.github.io/liquid/</a> to drive
+the data substitution needed to create the static files from the collection of data and markup files. Mainly it involves
+simple data substitution, using handlebars to place data elements within the Html files, <code class="language-html highlighter-rouge">{{site.title}}</code> for example. Programmatic control is also available, so you can iterate over a collection to create things
+like a list of posts. My home page has three cards for the most recent posts on the site. To make each one, I had to
+find the correct syntax to iterate over the posts – but only three times. The syntax to do that is:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="syntax"><code>    {% for post in site.posts limit:3 %}
+      <span class="nt">&lt;div&gt;</span>
+        repeating data goes here, 
+        like {{post.content}}
+      <span class="nt">&lt;/div&gt;</span>
+    {% endfor %}
+</code></pre></div></div>
+
+<h3 id="end-result">End Result</h3>
+
+<p>I now have a very lightweight and fast-loading site. Jekyll builds everything as static files. I only have a short
+javascript routine for reacting to a mouse click on the front page cards. Everything else published for the site is Html
+or CSS files that load very quickly. All the content and formatting are under my control to update or change. Learning
+Jekyll, HTML, and CSS has been a nice side-effect of the journey, and I think I’m in a better spot to go back and tackle
+React one day.</p>
+
+<p>If you are contemplating putting together a blog or are working towards creating a Jekyll site, I hope the information
+here is helpful.</p>
+
+    <div>Want to encourage more content like this? Please consider <a
+            href="https://www.buymeacoffee.com/mikehentges">buying me a cup of coffee!</a>
+        <p></p>
+    </div>
+</section> <!-- This is our footer. -->
+<footer>
+  <div class="footer-bottom">
+    <div class="author">Michael Hentges Blog © 2022</div>
+    <div class="author">
+      <a rel="me" href="https://hachyderm.io/@mhentges">Mastodon</a>
+    </div>
+    <div class="tool">
+      Powered by <a href="https://jekyllrb.com/">Jekyl</a> and
+      <a href="https://pages.github.com/">GitHub Pages</a>
+    </div>
+  </div>
+</footer>
+
+  </body>
+</html>
